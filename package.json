@@ -1,5 +1,5 @@
 {
-  "name": "my-turborepo",
+  "name": "ym-491",
   "private": true,
   "scripts": {
     "build": "turbo run build",
