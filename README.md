@@ -1,135 +1,108 @@
-# Turborepo starter
+# ym-491 Projesi
 
-This Turborepo starter is maintained by the Turborepo core team.
+Bu proje, mikroservis tabanlı bir arka uç ve modern bir Next.js ön uç içeren tam yığın bir uygulamadır.
 
-## Using this example
+## 🏗 Mimari
 
-Run the following command:
+### Arka Uç (Mikroservisler)
+Arka uç, Docker Compose kullanılarak düzenlenen birkaç servisten oluşmaktadır:
 
-```sh
-npx create-turbo@latest
-```
+*   **Ağ Geçidi (Nginx):** Tüm arka uç istekleri için giriş noktasıdır. `80` numaralı bağlantı noktasında çalışır.
+    *   `/ai/*` isteklerini Yapay Zeka Servisine yönlendirir
+    *   `/base/*` isteklerini Temel Servise yönlendirir
+    *   `/io/*` isteklerini Girdi/Çıktı Servisine yönlendirir
+*   **Temel Servis:** Çekirdek işlevselliği, kimlik doğrulama ve kullanıcı yönetimini ele alır.
+    *   Teknoloji: Python, FastAPI, SQLAlchemy
+    *   Bağlantı Noktası: `8002` (dışa açık), `8000` (dahili)
+*   **Yapay Zeka Servisi:** Yapay Zeka işlemleri için özelleşmiş servis.
+    *   Teknoloji: Python, FastAPI
+    *   Bağlantı Noktası: `8001` (dışa açık), `8000` (dahili)
+*   **Girdi/Çıktı Servisi:** Harici G/Ç işlemlerini (örn. Firebase entegrasyonu) ele alır.
+    *   Teknoloji: Python, FastAPI
+    *   Bağlantı Noktası: `8003` (dışa açık), `8000` (dahili)
+*   **Veritabanı:** PostgreSQL
+    *   Bağlantı Noktası: `5432`
 
-## What's inside?
+### Ön Uç
+*   **İstemci:** Bir Next.js 16 uygulaması.
+    *   Teknoloji: React 19, Tailwind CSS 4, React Query, Bun.
 
-This Turborepo includes the following packages/apps:
+## 🚀 Başlangıç
 
-### Apps and Packages
+### Ön Koşullar
+*   [Docker Desktop](https://www.docker.com/products/docker-desktop)
+*   [Bun](https://bun.sh/) (ön uç için önerilir) veya Node.js
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### 1. Arka Uç Kurulumu (Docker)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Arka ucu çalıştırmanın en kolay yolu Docker Compose kullanmaktır.
 
-### Utilities
+1.  Arka uç dizinine gidin:
+    ```bash
+    cd backend
+    ```
 
-This Turborepo has some additional tools already setup for you:
+2.  Servisleri başlatın:
+    ```bash
+    docker-compose up -d --build
+    ```
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+Bu işlem tüm servisleri ve PostgreSQL veritabanını başlatacaktır.
+*   Ağ Geçidi: `http://localhost`
+*   Temel Servis: `http://localhost:8002`
+*   Yapay Zeka Servisi: `http://localhost:8001`
+*   Girdi/Çıktı Servisi: `http://localhost:8003`
 
-### Build
+### 2. Ön Uç Kurulumu
 
-To build all apps and packages, run the following command:
+1.  İstemci dizinine gidin:
+    ```bash
+    cd client
+    ```
 
-```
-cd my-turborepo
+2.  Bağımlılıkları yükleyin:
+    ```bash
+    bun install
+    # veya
+    npm install
+    ```
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+3.  Geliştirme sunucusunu çalıştırın:
+    ```bash
+    bun dev
+    # veya
+    npm run dev
+    ```
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+Ön uç `http://localhost:3000` adresinde erişilebilir olacaktır.
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## 🛠 Geliştirme Notları
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+### Ortam Değişkenleri
+*   **Arka Uç:** Varsayılan ortam değişkenleri için `backend/docker-compose.yml` dosyasını kontrol edin.
+*   **İstemci:** Varsayılan API uç noktalarını geçersiz kılmanız gerekiyorsa `client/` dizininde bir `.env.local` dosyası oluşturun.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+### API Dokümantasyonu
+Arka uç çalışırken, birleşik API dokümantasyonuna veya bireysel servis dokümanlarına erişebilirsiniz:
+*   Ağ Geçidi/Birleşik: `http://localhost/docs` (yapılandırıldıysa)
+*   Temel Servis Swagger: `http://localhost:8002/docs`
+*   Yapay Zeka Servisi Swagger: `http://localhost:8001/docs`
+*   Girdi/Çıktı Servisi Swagger: `http://localhost:8003/docs`
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## 📂 Proje Yapısı
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+ym-491/
+├── backend/              # Arka uç mikroservisleri
+│   ├── ai-service/       # Yapay Zeka özel mantığı
+│   ├── base-service/     # Kimlik Doğrulama ve Çekirdek mantık (Postgres)
+│   ├── io-service/       # Firebase/G/Ç mantığı
+│   ├── gateway/          # Nginx Ters Proxy
+│   └── docker-compose.yml
+└── client/               # Next.js Ön uç
+    ├── src/
+    │   ├── app/          # Uygulama Yönlendirici sayfaları
+    │   ├── features/     # Özellik tabanlı modüller
+    │   ├── components/   # Paylaşılan UI bileşenleri
+    │   └── lib/          # Yardımcı programlar ve API istemcileri
 ```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
