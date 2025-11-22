@@ -106,3 +106,55 @@ ym-491/
     │   ├── components/   # Paylaşılan UI bileşenleri
     │   └── lib/          # Yardımcı programlar ve API istemcileri
 ```
+
+## 🤝 Katkıda Bulunma
+
+Projeye katkıda bulunmak için **Fork & Pull Request** stratejisini kullanıyoruz. Lütfen aşağıdaki adımları izleyin:
+
+1.  **Projeyi Fork Edin**
+    *   Bu repository'nin sağ üst köşesindeki **Fork** butonuna tıklayarak projeyi kendi GitHub hesabınıza kopyalayın.
+
+2.  **Fork'u Yerel Makinenize Klonlayın**
+    *   Kendi hesabınızdaki kopyayı bilgisayarınıza indirin:
+        ```bash
+        git clone https://github.com/KULLANICI_ADINIZ/ym-491.git
+        cd ym-491
+        ```
+
+3.  **Upstream Remote Ekleyin**
+    *   Orijinal projeyi (ana depo) `upstream` olarak ekleyerek güncel kalmasını sağlayın:
+        ```bash
+        git remote add upstream https://github.com/ORIJINAL_REPO_SAHIBI/ym-491.git
+        ```
+
+4.  **Güncel Olduğunuzdan Emin Olun**
+    *   Çalışmaya başlamadan önce ana daldan güncellemeleri alın:
+        ```bash
+        git checkout main
+        git pull upstream main
+        ```
+
+5.  **Yeni Bir Branch Oluşturun**
+    *   Yapacağınız değişiklik için açıklayıcı bir isme sahip yeni bir dal açın:
+        ```bash
+        git checkout -b feature/yeni-ozellik-adi
+        # veya
+        git checkout -b fix/hata-duzeltme
+        ```
+
+6.  **Geliştirmelerinizi Yapın ve Commit Edin**
+    *   Kodunuzu yazın ve açıklayıcı mesajlarla kaydedin:
+        ```bash
+        git add .
+        git commit -m "feat: Yeni özellik eklendi"
+        ```
+
+7.  **Değişiklikleri Kendi Forkunuza Gönderin (Push)**
+    *   ```bash
+        git push origin feature/yeni-ozellik-adi
+        ```
+
+8.  **Pull Request (PR) Oluşturun**
+    *   GitHub'da kendi fork sayfanıza gidin.
+    *   Yeşil renkli **Compare & pull request** butonuna tıklayın.
+    *   Yaptığınız değişiklikleri özetleyen bir başlık ve açıklama yazarak PR'ı gönderin.
