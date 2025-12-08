@@ -1,3 +1,5 @@
 fastapi
 uvicorn[standard]
 firebase-admin
+sqlalchemy
+psycopg2-binary

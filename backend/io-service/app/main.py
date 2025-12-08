@@ -1,9 +1,11 @@
 from typing import Union
 from fastapi import FastAPI
 from .firebase import get_firestore_client
+from .routers import cv
 
 app = FastAPI(root_path="/api/io")
 
+app.include_router(cv.router)
 
 @app.get("/")
 def read_root():

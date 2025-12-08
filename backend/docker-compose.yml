@@ -99,6 +99,9 @@ services:
     # IO service might need firebase credentials env vars
     environment:
       - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
+      - DATABASE_URL=postgresql://user:password@db:5432/app_db
+    depends_on:
+      - db
     restart: always
 
 volumes:

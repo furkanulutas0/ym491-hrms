@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { employeesApi } from "@/features/employees/api/employees-api";
 
 export default function EmployeeDetailsPage({
   params,
@@ -10,6 +12,24 @@ export default function EmployeeDetailsPage({
   params: { id: string };
 }) {
   const [activeTab, setActiveTab] = useState("personal");
+
+  const { data: employee, isLoading: isLoadingEmployee } = useQuery({
+    queryKey: ["employee", params.id],
+    queryFn: () => employeesApi.getById(parseInt(params.id)),
+  });
+
+  const { data: cv, isLoading: isLoadingCV } = useQuery({
+    queryKey: ["employee-cv", params.id],
+    queryFn: () => employeesApi.getCV(parseInt(params.id)),
+  });
+
+  if (isLoadingEmployee || isLoadingCV) {
+    return <div className="p-6">Loading...</div>;
+  }
+
+  if (!employee) {
+    return <div className="p-6">Employee not found</div>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +54,7 @@ export default function EmployeeDetailsPage({
           /
         </span>
         <span className="text-text-primary-light dark:text-text-primary-dark text-sm font-medium leading-normal">
-          Jane Doe
+          {employee.first_name} {employee.last_name}
         </span>
       </div>
 
@@ -50,15 +70,15 @@ export default function EmployeeDetailsPage({
           ></div>
           <div className="flex flex-col justify-center">
             <p className="text-text-primary-light dark:text-text-primary-dark text-[22px] font-bold leading-tight tracking-[-0.015em]">
-              Jane Doe
+              {employee.first_name} {employee.last_name}
             </p>
             <p className="text-text-secondary-light dark:text-text-secondary-dark text-base font-normal leading-normal">
-              Senior Product Designer, Product Team
+              {employee.title}, {employee.department}
             </p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="h-2 w-2 rounded-full bg-green-500"></span>
+              <span className={`h-2 w-2 rounded-full ${employee.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
               <p className="text-text-secondary-light dark:text-text-secondary-dark text-base font-normal leading-normal">
-                Status: Active
+                Status: {employee.is_active ? 'Active' : 'Inactive'}
               </p>
             </div>
           </div>
@@ -163,7 +183,7 @@ export default function EmployeeDetailsPage({
                       Email Address
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      jane.doe@company.com
+                      {cv?.personal_info?.email || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -171,7 +191,7 @@ export default function EmployeeDetailsPage({
                       Phone
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      (123) 456-7890
+                      {cv?.personal_info?.phone || "N/A"}
                     </p>
                   </div>
                   <div className="col-span-1 md:col-span-2">
@@ -179,7 +199,7 @@ export default function EmployeeDetailsPage({
                       Address
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      123 Main St, Anytown, USA 12345
+                      {cv?.addresses?.[0] ? `${cv.addresses[0].street}, ${cv.addresses[0].city}, ${cv.addresses[0].country} ${cv.addresses[0].postal_code}` : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -188,7 +208,7 @@ export default function EmployeeDetailsPage({
               <div className="bg-card-light dark:bg-card-dark rounded-xl p-6 shadow-sm border border-border-light dark:border-border-dark">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
-                    Emergency Contact
+                    Basic Information
                   </h3>
                   <button className="text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors">
                     <span className="material-symbols-outlined text-lg">
@@ -199,26 +219,34 @@ export default function EmployeeDetailsPage({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                   <div>
                     <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      Name
+                      Birth Date
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      John Doe
+                      {cv?.personal_info?.birth_date ? new Date(cv.personal_info.birth_date).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      Relationship
+                      Gender
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      Spouse
+                      {cv?.personal_info?.gender || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      Phone
+                      Nationality
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      (098) 765-4321
+                      {cv?.personal_info?.nationality || "N/A"}
+                    </p>
+                  </div>
+                   <div>
+                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                      LinkedIn
+                    </p>
+                    <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
+                      {cv?.personal_info?.linkedin_url ? <a href={cv.personal_info.linkedin_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">View Profile</a> : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -282,29 +310,22 @@ export default function EmployeeDetailsPage({
                 <h3 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark mb-4">
                   Current Role
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                {cv?.work_experience?.filter(exp => exp.is_current).map((exp, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6 last:mb-0">
                   <div>
                     <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                       Job Title
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      Senior Product Designer
+                      {exp.job_title}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      Department
+                      Company
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      Product & Engineering
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      Manager
-                    </p>
-                    <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      Sarah Connor
+                      {exp.company}
                     </p>
                   </div>
                   <div>
@@ -312,7 +333,7 @@ export default function EmployeeDetailsPage({
                       Start Date
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      March 1, 2020
+                      {new Date(exp.start_date).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
@@ -320,18 +341,20 @@ export default function EmployeeDetailsPage({
                       Employment Type
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      Full-Time
+                      {exp.employment_type || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      Work Location
+                      Location
                     </p>
                     <p className="font-medium text-text-primary-light dark:text-text-primary-dark">
-                      Remote (San Francisco)
+                      {exp.city}, {exp.country}
                     </p>
                   </div>
                 </div>
+                ))}
+                {!cv?.work_experience?.some(exp => exp.is_current) && <p>No current role found.</p>}
               </div>
 
               <div className="bg-card-light dark:bg-card-dark rounded-xl p-6 shadow-sm border border-border-light dark:border-border-dark">
@@ -339,44 +362,27 @@ export default function EmployeeDetailsPage({
                   Previous Roles
                 </h3>
                 <div className="space-y-6">
-                  <div className="flex flex-col gap-1 pb-6 border-b border-border-light dark:border-border-dark last:border-0 last:pb-0">
+                  {cv?.work_experience?.filter(exp => !exp.is_current).map((exp, index) => (
+                  <div key={index} className="flex flex-col gap-1 pb-6 border-b border-border-light dark:border-border-dark last:border-0 last:pb-0">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                          Product Designer
+                          {exp.job_title}
                         </h4>
                         <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          TechStart Inc.
+                          {exp.company}
                         </p>
                       </div>
                       <span className="text-sm text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                        2018 - 2020
+                        {new Date(exp.start_date).getFullYear()} - {exp.end_date ? new Date(exp.end_date).getFullYear() : "Present"}
                       </span>
                     </div>
                     <p className="text-sm text-text-primary-light dark:text-text-primary-dark mt-2">
-                      Led design for the mobile application team, improving user
-                      retention by 15%.
+                      {exp.description}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                          Junior UI Designer
-                        </h4>
-                        <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                          Creative Solutions Agency
-                        </p>
-                      </div>
-                      <span className="text-sm text-text-secondary-light dark:text-text-secondary-dark bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                        2016 - 2018
-                      </span>
-                    </div>
-                    <p className="text-sm text-text-primary-light dark:text-text-primary-dark mt-2">
-                      Created visual assets and marketing materials for various
-                      clients.
-                    </p>
-                  </div>
+                  ))}
+                  {!cv?.work_experience?.some(exp => !exp.is_current) && <p>No previous roles found.</p>}
                 </div>
               </div>
             </div>
