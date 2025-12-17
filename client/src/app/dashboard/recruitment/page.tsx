@@ -1,52 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useJobs } from "@/features/recruitment/hooks/use-jobs";
 
 export default function RecruitmentPage() {
-  const jobPostings = [
-    {
-      id: 1,
-      title: "AI/ML Engineer",
-      department: "Technology",
-      location: "Remote (US)",
-      deadline: "2024-12-31",
-      status: "Active",
-    },
-    {
-      id: 2,
-      title: "Product Designer",
-      department: "Design",
-      location: "San Francisco, CA",
-      deadline: "2024-12-15",
-      status: "Active",
-    },
-    {
-      id: 3,
-      title: "HR Business Partner",
-      department: "Human Resources",
-      location: "New York, NY",
-      deadline: "2024-11-30",
-      status: "Closed",
-    },
-    {
-      id: 4,
-      title: "Marketing Manager",
-      department: "Marketing",
-      location: "London, UK",
-      deadline: "2025-01-10",
-      status: "Active",
-    },
-    {
-      id: 5,
-      title: "Frontend Developer",
-      department: "Technology",
-      location: "Remote (Global)",
-      deadline: "2024-12-20",
-      status: "Draft",
-    },
-  ];
+  // Fetch job postings from database
+  const { data: jobPostings = [], isLoading, error } = useJobs();
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "Active":
         return (
@@ -67,8 +28,18 @@ export default function RecruitmentPage() {
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+            Draft
+          </span>
+        );
     }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "No deadline";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -175,93 +146,120 @@ export default function RecruitmentPage() {
             </tr>
           </thead>
           <tbody>
-            {jobPostings.map((job) => (
-              <tr
-                key={job.id}
-                className="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
-              >
-                <td className="px-6 py-4 font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
-                  <Link href={`/dashboard/recruitment/${job.id}`} className="hover:text-primary hover:underline">
-                    {job.title}
-                  </Link>
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {job.department}
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {job.location}
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {job.deadline}
-                </td>
-                <td className="px-6 py-4 text-center">
-                  {getStatusBadge(job.status)}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Link href={`/dashboard/recruitment/${job.id}`} className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
-                      <span className="material-symbols-outlined text-lg">
-                        edit
-                      </span>
-                    </Link>
-                    <button className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
-                      <span className="material-symbols-outlined text-lg">
-                        group
-                      </span>
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
-                      <span className="material-symbols-outlined text-lg">
-                        more_horiz
-                      </span>
-                    </button>
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                    <p className="text-text-secondary-light dark:text-text-secondary-dark">Loading job postings...</p>
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : error ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-red-500">error</span>
+                    <p className="text-text-primary-light dark:text-text-primary-dark font-semibold">Failed to load job postings</p>
+                    <p className="text-text-secondary-light dark:text-text-secondary-dark text-sm">Please try refreshing the page</p>
+                  </div>
+                </td>
+              </tr>
+            ) : jobPostings.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-text-secondary-light dark:text-text-secondary-dark">work_outline</span>
+                    <p className="text-text-primary-light dark:text-text-primary-dark font-semibold">No job postings yet</p>
+                    <p className="text-text-secondary-light dark:text-text-secondary-dark text-sm">Create your first job posting to get started</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              jobPostings.map((job) => (
+                <tr
+                  key={job.id}
+                  className="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                >
+                  <td className="px-6 py-4 font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
+                    <Link href={`/dashboard/recruitment/${job.id}`} className="hover:text-primary hover:underline">
+                      {job.title}
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {job.department || "Not specified"}
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {job.location || "Remote"}
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {formatDate(job.expiration_date)}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {getStatusBadge(job.status)}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/dashboard/recruitment/${job.id}`} className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+                        <span className="material-symbols-outlined text-lg">
+                          edit
+                        </span>
+                      </Link>
+                      <button className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+                        <span className="material-symbols-outlined text-lg">
+                          group
+                        </span>
+                      </button>
+                      <button className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+                        <span className="material-symbols-outlined text-lg">
+                          more_horiz
+                        </span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <span className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-          Showing{" "}
-          <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
-            1-5
-          </span>{" "}
-          of{" "}
-          <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
-            23
-          </span>
-        </span>
-        <div className="inline-flex items-center gap-2">
-          <button className="flex items-center justify-center h-8 w-8 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/10 text-text-primary-light dark:text-text-primary-dark transition-colors">
-            <span className="material-symbols-outlined text-lg">
-              chevron_left
-            </span>
-          </button>
-          <button className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-white text-sm font-bold">
-            1
-          </button>
-          <button className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-primary/10 text-sm text-text-primary-light dark:text-text-primary-dark transition-colors">
-            2
-          </button>
-          <button className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-primary/10 text-sm text-text-primary-light dark:text-text-primary-dark transition-colors">
-            3
-          </button>
+      {!isLoading && !error && jobPostings.length > 0 && (
+        <div className="flex items-center justify-between px-2">
           <span className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-            ...
-          </span>
-          <button className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-primary/10 text-sm text-text-primary-light dark:text-text-primary-dark transition-colors">
-            5
-          </button>
-          <button className="flex items-center justify-center h-8 w-8 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/10 text-text-primary-light dark:text-text-primary-dark transition-colors">
-            <span className="material-symbols-outlined text-lg">
-              chevron_right
+            Showing{" "}
+            <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+              1-{jobPostings.length}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+              {jobPostings.length}
             </span>
-          </button>
+          </span>
+          <div className="inline-flex items-center gap-2">
+            <button 
+              disabled
+              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark opacity-50 cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-lg">
+                chevron_left
+              </span>
+            </button>
+            <button className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-white text-sm font-bold">
+              1
+            </button>
+            <button 
+              disabled
+              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark opacity-50 cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-lg">
+                chevron_right
+              </span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

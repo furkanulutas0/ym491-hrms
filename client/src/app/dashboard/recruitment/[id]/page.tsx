@@ -1,57 +1,82 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-
-// Mock Data
-const jobDetails = {
-  id: 1,
-  title: "Senior Product Designer",
-  department: "Design Department",
-  location: "San Francisco, CA",
-  type: "Remote",
-  status: "Active",
-  description: "We are looking for a Senior Product Designer to join our team...",
-  responsibilities: [
-    "Lead design projects across the entire product lifecycle",
-    "Work with product managers and engineers to define product requirements",
-    "Create wireframes, prototypes, and high-fidelity designs",
-  ],
-  requirements: [
-    "5+ years of experience in product design",
-    "Strong portfolio showcasing your design process and visual design skills",
-    "Experience with Figma, Sketch, or Adobe XD",
-  ],
-  benefits: [
-    "Competitive salary and equity package",
-    "Health, dental, and vision insurance",
-    "Unlimited PTO",
-  ],
-  salary_range: "$140k - $180k",
-};
-
-const stats = [
-  { label: "Total Applications", value: "1,234" },
-  { label: "New (7 days)", value: "89" },
-  { label: "Total Views", value: "5,678" },
-  { label: "Conversion Rate", value: "21.7%" },
-  { label: "Shortlisted", value: "45" },
-  { label: "Interviewed", value: "12" },
-];
-
-const applications = [
-  { id: 1, name: "John Doe", email: "john.doe@example.com", phone: "(123) 456-7890", date: "2023-10-26", source: "LinkedIn", status: "New" },
-  { id: 2, name: "Jane Smith", email: "jane.smith@example.com", phone: "(987) 654-3210", date: "2023-10-25", source: "Indeed", status: "Shortlisted" },
-  { id: 3, name: "Alex Johnson", email: "alex.j@example.com", phone: "(555) 123-4567", date: "2023-10-24", source: "Referral", status: "Interview" },
-  { id: 4, name: "Emily White", email: "emily.w@example.com", phone: "(222) 333-4444", date: "2023-10-23", source: "Company Website", status: "Rejected" },
-  { id: 5, name: "Michael Brown", email: "michael.b@example.com", phone: "(444) 555-6666", date: "2023-10-22", source: "LinkedIn", status: "Hired" },
-];
+import { useJobApplications } from "@/features/recruitment/hooks/use-applications";
+import { useJob } from "@/features/recruitment/hooks/use-jobs";
 
 export default function JobDetailsPage() {
   const params = useParams();
+  const jobId = Number(params.id);
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Fetch job details and applications from database
+  const { data: jobDetails, isLoading: isLoadingJob, error: jobError } = useJob(jobId);
+  const { data: applications = [], isLoading: isLoadingApplications } = useJobApplications(jobId);
+
+  // Calculate stats from real data
+  const stats = useMemo(() => {
+    const totalApplications = applications.length;
+    const newApplications = applications.filter(app => app.status === "New").length;
+    const shortlisted = applications.filter(app => app.status === "Shortlisted").length;
+    const interviewed = applications.filter(app => app.status === "Interview").length;
+    
+    // Calculate new applications in last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const newInLast7Days = applications.filter(app => {
+      const appliedDate = new Date(app.applied_at);
+      return appliedDate >= sevenDaysAgo;
+    }).length;
+
+    return [
+      { label: "Total Applications", value: totalApplications.toString() },
+      { label: "New (7 days)", value: newInLast7Days.toString() },
+      { label: "Total Views", value: "-" }, // Not tracked yet
+      { label: "Conversion Rate", value: "-" }, // Not calculated yet
+      { label: "Shortlisted", value: shortlisted.toString() },
+      { label: "Interviewed", value: interviewed.toString() },
+    ];
+  }, [applications]);
+
+  // Format salary range
+  const formatSalaryRange = (min: number | null, max: number | null, currency: string | null) => {
+    if (!min && !max) return "Not specified";
+    const curr = currency || "USD";
+    if (min && max) return `${curr} ${min.toLocaleString()} - ${max.toLocaleString()}`;
+    if (min) return `${curr} ${min.toLocaleString()}+`;
+    return `Up to ${curr} ${max?.toLocaleString()}`;
+  };
+
+  // Loading state
+  if (isLoadingJob) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="text-text-secondary-light dark:text-text-secondary-dark">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (jobError || !jobDetails) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="material-symbols-outlined text-5xl text-red-500">error</span>
+          <p className="text-text-primary-light dark:text-text-primary-dark font-bold">Job posting not found</p>
+          <p className="text-text-secondary-light dark:text-text-secondary-dark">The job posting you're looking for doesn't exist or has been removed.</p>
+          <Link href="/dashboard/recruitment" className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors">
+            Back to Recruitment
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
@@ -62,12 +87,18 @@ export default function JobDetailsPage() {
             <h1 className="text-3xl md:text-4xl font-black text-text-primary-light dark:text-text-primary-dark tracking-tight">
               {jobDetails.title}
             </h1>
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 dark:bg-green-500/10 text-green-800 dark:text-green-400 text-sm font-medium ring-1 ring-inset ring-green-500/20">
-              {jobDetails.status}
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ring-inset ${
+              jobDetails.status === "Active" 
+                ? "bg-green-100 dark:bg-green-500/10 text-green-800 dark:text-green-400 ring-green-500/20"
+                : jobDetails.status === "Draft"
+                ? "bg-gray-100 dark:bg-gray-500/10 text-gray-800 dark:text-gray-400 ring-gray-500/20"
+                : "bg-yellow-100 dark:bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 ring-yellow-500/20"
+            }`}>
+              {jobDetails.status || "Draft"}
             </span>
           </div>
           <p className="text-text-secondary-light dark:text-text-secondary-dark text-base font-normal">
-            {jobDetails.department} • {jobDetails.location} • {jobDetails.type}
+            {jobDetails.department || "Not specified"} • {jobDetails.location || "Remote"} • {jobDetails.work_type || "Full-time"}
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
@@ -133,10 +164,10 @@ export default function JobDetailsPage() {
       <div className="py-4">
         <AnimatePresence mode="wait">
           {activeTab === "overview" && (
-            <OverviewTab key="overview" job={jobDetails} />
+            <OverviewTab key="overview" job={jobDetails} salaryRange={formatSalaryRange(jobDetails.salary_range_min, jobDetails.salary_range_max, jobDetails.salary_currency)} />
           )}
           {activeTab === "applications" && (
-            <ApplicationsTab key="applications" applications={applications} />
+            <ApplicationsTab key="applications" applications={applications} isLoading={isLoadingApplications} />
           )}
           {activeTab === "analytics" && (
             <AnalyticsTab key="analytics" />
@@ -152,7 +183,7 @@ export default function JobDetailsPage() {
 
 // Sub-components
 
-function OverviewTab({ job }: { job: any }) {
+function OverviewTab({ job, salaryRange }: { job: any; salaryRange: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -162,37 +193,43 @@ function OverviewTab({ job }: { job: any }) {
     >
       <CollapsibleCard title="Job Description">
         <p className="text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
-          {job.description}
+          {job.description || "No description provided."}
         </p>
       </CollapsibleCard>
 
-      <CollapsibleCard title="Responsibilities">
-        <ul className="list-disc list-inside space-y-2 text-text-secondary-light dark:text-text-secondary-dark">
-          {job.responsibilities.map((item: string, i: number) => (
-            <li key={i}>{item}</li>
-          ))}
-        </ul>
-      </CollapsibleCard>
+      {job.responsibilities && job.responsibilities.length > 0 && (
+        <CollapsibleCard title="Responsibilities">
+          <ul className="list-disc list-inside space-y-2 text-text-secondary-light dark:text-text-secondary-dark">
+            {job.responsibilities.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </CollapsibleCard>
+      )}
 
-      <CollapsibleCard title="Requirements">
-        <ul className="list-disc list-inside space-y-2 text-text-secondary-light dark:text-text-secondary-dark">
-          {job.requirements.map((item: string, i: number) => (
-            <li key={i}>{item}</li>
-          ))}
-        </ul>
-      </CollapsibleCard>
+      {job.requirements && job.requirements.length > 0 && (
+        <CollapsibleCard title="Requirements">
+          <ul className="list-disc list-inside space-y-2 text-text-secondary-light dark:text-text-secondary-dark">
+            {job.requirements.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </CollapsibleCard>
+      )}
 
-      <CollapsibleCard title="Benefits">
-        <ul className="list-disc list-inside space-y-2 text-text-secondary-light dark:text-text-secondary-dark">
-          {job.benefits.map((item: string, i: number) => (
-            <li key={i}>{item}</li>
-          ))}
-        </ul>
-      </CollapsibleCard>
+      {job.benefits && job.benefits.length > 0 && (
+        <CollapsibleCard title="Benefits">
+          <ul className="list-disc list-inside space-y-2 text-text-secondary-light dark:text-text-secondary-dark">
+            {job.benefits.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </CollapsibleCard>
+      )}
 
       <CollapsibleCard title="Salary Range (Admin Only)">
         <p className="text-text-primary-light dark:text-text-primary-dark font-medium">
-          {job.salary_range}
+          {salaryRange}
         </p>
       </CollapsibleCard>
     </motion.div>
@@ -235,7 +272,12 @@ function CollapsibleCard({ title, children }: { title: string; children: React.R
   );
 }
 
-function ApplicationsTab({ applications }: { applications: any[] }) {
+function ApplicationsTab({ applications, isLoading }: { applications: any[]; isLoading: boolean }) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -283,46 +325,63 @@ function ApplicationsTab({ applications }: { applications: any[] }) {
             </tr>
           </thead>
           <tbody>
-            {applications.map((app) => (
-              <tr
-                key={app.id}
-                className="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors"
-              >
-                <td className="px-6 py-4 font-medium text-text-primary-light dark:text-text-primary-dark">
-                  <Link href="#" className="hover:text-primary transition-colors">
-                    {app.name}
-                  </Link>
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {app.email}
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {app.phone}
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {app.date}
-                </td>
-                <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
-                  {app.source}
-                </td>
-                <td className="px-6 py-4">
-                  <StatusBadge status={app.status} />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-center items-center gap-2">
-                    <button className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors rounded-lg hover:bg-primary/10">
-                      <span className="material-symbols-outlined text-xl">visibility</span>
-                    </button>
-                    <button className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-yellow-500 transition-colors rounded-lg hover:bg-yellow-500/10">
-                      <span className="material-symbols-outlined text-xl">star</span>
-                    </button>
-                    <button className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-red-500 transition-colors rounded-lg hover:bg-red-500/10">
-                      <span className="material-symbols-outlined text-xl">thumb_down</span>
-                    </button>
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-text-secondary-light dark:text-text-secondary-dark">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+                    Loading applications...
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : applications.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-text-secondary-light dark:text-text-secondary-dark">
+                  No applications found for this job posting.
+                </td>
+              </tr>
+            ) : (
+              applications.map((app) => (
+                <tr
+                  key={app.id}
+                  className="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors"
+                >
+                  <td className="px-6 py-4 font-medium text-text-primary-light dark:text-text-primary-dark">
+                    <Link href="#" className="hover:text-primary transition-colors">
+                      {app.candidate_name}
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {app.email}
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {app.phone || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {formatDate(app.applied_at)}
+                  </td>
+                  <td className="px-6 py-4 text-text-secondary-light dark:text-text-secondary-dark">
+                    {app.source || 'Direct'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <StatusBadge status={app.status} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-center items-center gap-2">
+                      <button className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors rounded-lg hover:bg-primary/10">
+                        <span className="material-symbols-outlined text-xl">visibility</span>
+                      </button>
+                      <button className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-yellow-500 transition-colors rounded-lg hover:bg-yellow-500/10">
+                        <span className="material-symbols-outlined text-xl">star</span>
+                      </button>
+                      <button className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-red-500 transition-colors rounded-lg hover:bg-red-500/10">
+                        <span className="material-symbols-outlined text-xl">thumb_down</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

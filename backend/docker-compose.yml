@@ -120,15 +120,25 @@ services:
           path: ./io-service/requirements.txt
     volumes:
       - ./io-service:/app
+      - cv-uploads:/app/cv-uploads
     environment:
-      - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
       - DATABASE_URL=postgresql://user:password@db:5432/app_db
       - BASE_SERVICE_URL=http://base-service:8000
-      - SECRET_KEY=your-secret-key-change-in-productionon
+      - SECRET_KEY=your-secret-key-change-in-production
+      - REDIS_URL=redis://redis:6379/0
 
     depends_on:
       - db
+      - redis
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
     restart: always
 
 volumes:
   postgres_data:
+  cv-uploads:
