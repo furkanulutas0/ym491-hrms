@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useJobApplications } from "@/features/recruitment/hooks/use-applications";
 import { useJob } from "@/features/recruitment/hooks/use-jobs";
+import PipelineTab from "@/components/recruitment/PipelineTab";
 
 export default function JobDetailsPage() {
   const params = useParams();
@@ -133,15 +134,15 @@ export default function JobDetailsPage() {
 
       {/* 3. Tab System */}
       <div className="border-b border-border-light dark:border-border-dark mt-2">
-        <div className="flex gap-8">
-          {["Overview", "Applications", "Analytics", "Internal Notes"].map((tab) => {
+        <div className="flex gap-8 overflow-x-auto">
+          {["Overview", "Applications", "Pipeline", "Analytics", "Internal Notes"].map((tab) => {
             const tabKey = tab.toLowerCase().replace(" ", "-");
             const isActive = activeTab === tabKey;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tabKey)}
-                className={`pb-4 pt-2 text-sm font-bold relative transition-colors ${
+                className={`pb-4 pt-2 text-sm font-bold relative transition-colors whitespace-nowrap ${
                   isActive
                     ? "text-primary"
                     : "text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark"
@@ -168,6 +169,9 @@ export default function JobDetailsPage() {
           )}
           {activeTab === "applications" && (
             <ApplicationsTab key="applications" applications={applications} isLoading={isLoadingApplications} />
+          )}
+          {activeTab === "pipeline" && (
+            <PipelineTab key="pipeline" jobId={jobId} />
           )}
           {activeTab === "analytics" && (
             <AnalyticsTab key="analytics" />

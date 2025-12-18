@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
 # --- Job Posting Schemas ---
@@ -61,6 +61,23 @@ class JobApplication(JobApplicationBase):
     job_posting_id: int
     applied_at: datetime
     updated_at: Optional[datetime]
+    
+    # Pipeline fields
+    pipeline_stage: str = "applied"
+    pipeline_stage_updated_at: Optional[datetime] = None
+    ai_review_result: Optional[Dict[str, Any]] = None
+    ai_review_score: Optional[int] = None
+    exam_assigned: bool = False
+    exam_platform_id: Optional[str] = None
+    exam_completed_at: Optional[datetime] = None
+    exam_score: Optional[int] = None
+    ai_interview_scheduled_at: Optional[datetime] = None
+    ai_interview_completed_at: Optional[datetime] = None
+    ai_interview_type: Optional[str] = None
+    documents_required: Optional[List[Dict[str, Any]]] = None
+    documents_submitted: Optional[List[Dict[str, Any]]] = None
+    proposal_sent_at: Optional[datetime] = None
+    proposal_accepted: Optional[bool] = None
 
     class Config:
         from_attributes = True
@@ -119,5 +136,59 @@ class JobPostingDailyStats(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- Pipeline Schemas ---
+
+class AIReviewResult(BaseModel):
+    score: int  # 0-100
+    explanation: str
+    suitable: bool
+    strengths: List[str] = []
+    concerns: List[str] = []
+    matched_requirements: List[str] = []
+    missing_requirements: List[str] = []
+
+class PipelineStageUpdate(BaseModel):
+    stage: str  # applied, ai_review, exam, ai_interview, cv_verification, proposal
+    notes: Optional[str] = None
+
+class ExamAssignment(BaseModel):
+    platform: str
+    exam_id: str
+    exam_url: Optional[str] = None
+    due_date: Optional[datetime] = None
+    instructions: Optional[str] = None
+
+class ExamResult(BaseModel):
+    score: int
+    completed_at: datetime
+    passed: bool
+    details: Optional[Dict[str, Any]] = None
+
+class AIInterviewSchedule(BaseModel):
+    interview_type: str  # "video" or "voice"
+    scheduled_at: datetime
+    duration_minutes: Optional[int] = 30
+    meeting_url: Optional[str] = None
+    instructions: Optional[str] = None
+
+class DocumentRequirement(BaseModel):
+    document_type: str  # e.g., "id_card", "diploma", "certificate"
+    title: str
+    description: Optional[str] = None
+    required: bool = True
+    submitted: bool = False
+    file_url: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+
+class DocumentUpdate(BaseModel):
+    documents: List[DocumentRequirement]
+
+class ProposalData(BaseModel):
+    position: str
+    salary_offer: Optional[int] = None
+    start_date: Optional[date] = None
+    benefits: Optional[List[str]] = []
+    additional_notes: Optional[str] = None
 
 
