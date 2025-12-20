@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Date, UniqueConstraint
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..database import Base
@@ -37,6 +37,7 @@ class JobApplication(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     job_posting_id = Column(Integer, ForeignKey("job_postings.id"), nullable=False, index=True)
+    candidate_id = Column(String(50), index=True)  # Reference to candidate in candidate tables
     candidate_name = Column(String(150), nullable=False)
     email = Column(String(255), nullable=False, index=True)
     phone = Column(String(50))
@@ -48,6 +49,33 @@ class JobApplication(Base):
     status = Column(String(50), default="New", nullable=False, index=True) # New, Shortlisted, Interview, Hired, Rejected
     applied_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Pipeline fields
+    pipeline_stage = Column(String(50), default="applied", nullable=False, index=True) # applied, ai_review, exam, ai_interview, cv_verification, proposal
+    pipeline_stage_updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # AI Review stage fields
+    ai_review_result = Column(JSON)  # Stores AI matching analysis
+    ai_review_score = Column(Integer)  # 0-100 score
+    
+    # Exam stage fields
+    exam_assigned = Column(Boolean, default=False)
+    exam_platform_id = Column(String(255))  # External exam system ID
+    exam_completed_at = Column(DateTime(timezone=True))
+    exam_score = Column(Integer)  # Exam score
+    
+    # AI Interview stage fields
+    ai_interview_scheduled_at = Column(DateTime(timezone=True))
+    ai_interview_completed_at = Column(DateTime(timezone=True))
+    ai_interview_type = Column(String(20))  # "video" or "voice"
+    
+    # CV Verification stage fields
+    documents_required = Column(JSON)  # List of required documents
+    documents_submitted = Column(JSON)  # Submitted document URLs/info
+    
+    # Proposal stage fields
+    proposal_sent_at = Column(DateTime(timezone=True))
+    proposal_accepted = Column(Boolean)
 
     # Relationships
     job_posting = relationship("JobPosting", back_populates="applications")

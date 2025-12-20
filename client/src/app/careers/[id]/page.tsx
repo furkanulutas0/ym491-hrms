@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useJob } from "@/features/recruitment/hooks/use-jobs";
+import { ApplicationModal } from "@/components/application/ApplicationModal";
 
 export default function JobDetailsPage() {
   const params = useParams();
   const jobId = Number(params.id);
   const { data: job, isLoading, error } = useJob(jobId);
+  const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
@@ -162,7 +165,10 @@ export default function JobDetailsPage() {
                   <span className="material-symbols-outlined mr-2 text-lg">share</span>
                   Share
                 </button>
-                <button className="flex items-center justify-center rounded-lg bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-primary/40">
+                <button 
+                  onClick={() => setIsApplicationModalOpen(true)}
+                  className="flex items-center justify-center rounded-lg bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-primary/40"
+                >
                   Apply Now
                 </button>
               </div>
@@ -274,7 +280,10 @@ export default function JobDetailsPage() {
                   </div>
                 </div>
                 <div className="mt-6 pt-2">
-                  <button className="w-full rounded-lg bg-primary py-3 text-center text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/40">
+                  <button 
+                    onClick={() => setIsApplicationModalOpen(true)}
+                    className="w-full rounded-lg bg-primary py-3 text-center text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/40"
+                  >
                     Apply for this Job
                   </button>
                 </div>
@@ -347,6 +356,14 @@ export default function JobDetailsPage() {
           </div>
         </div>
       </footer>
+
+      {/* Application Modal */}
+      <ApplicationModal
+        isOpen={isApplicationModalOpen}
+        onClose={() => setIsApplicationModalOpen(false)}
+        jobId={jobId}
+        jobTitle={job.title}
+      />
     </div>
   );
 }

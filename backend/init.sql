@@ -812,7 +812,22 @@ CREATE TABLE public.job_applications (
     source character varying(100),
     status character varying(50) DEFAULT 'New'::character varying NOT NULL,
     applied_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    pipeline_stage character varying(50) DEFAULT 'applied'::character varying NOT NULL,
+    pipeline_stage_updated_at timestamp with time zone DEFAULT now(),
+    ai_review_result json,
+    ai_review_score integer,
+    exam_assigned boolean DEFAULT false,
+    exam_platform_id character varying(255),
+    exam_completed_at timestamp with time zone,
+    exam_score integer,
+    ai_interview_scheduled_at timestamp with time zone,
+    ai_interview_completed_at timestamp with time zone,
+    ai_interview_type character varying(20),
+    documents_required json,
+    documents_submitted json,
+    proposal_sent_at timestamp with time zone,
+    proposal_accepted boolean
 );
 
 
@@ -3107,6 +3122,13 @@ CREATE INDEX idx_job_applications_posting_id ON public.job_applications USING bt
 --
 
 CREATE INDEX idx_job_applications_status ON public.job_applications USING btree (status);
+
+
+--
+-- TOC entry for pipeline_stage index
+--
+
+CREATE INDEX idx_job_applications_pipeline_stage ON public.job_applications USING btree (pipeline_stage);
 
 
 --
