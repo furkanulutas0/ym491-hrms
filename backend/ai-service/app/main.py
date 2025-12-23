@@ -2,10 +2,21 @@ from typing import Union
 
 from fastapi import FastAPI
 from .routers import ai
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(root_path="/api/ai")
 
 app.include_router(ai.router)
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],    
+)
 
 
 @app.get("/")

@@ -54,10 +54,10 @@ export default function RecruitmentPage() {
             Manage all current job openings in your organization.
           </p>
         </div>
-        <button className="flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold leading-normal hover:bg-primary/90 transition-colors">
+        <Link href="/dashboard/recruitment/new" className="flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold leading-normal hover:bg-primary/90 transition-colors">
           <span className="material-symbols-outlined">add</span>
           <span className="truncate">Create New Job Posting</span>
-        </button>
+        </Link>
       </div>
 
       {/* Search and Filters */}
@@ -200,16 +200,16 @@ export default function RecruitmentPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Link href={`/dashboard/recruitment/${job.id}`} className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+                      <Link href={`/dashboard/recruitment/${job.id}/edit`} className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
                         <span className="material-symbols-outlined text-lg">
                           edit
                         </span>
                       </Link>
-                      <button className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+                      <Link href={`/dashboard/recruitment/${job.id}`} className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
                         <span className="material-symbols-outlined text-lg">
                           group
                         </span>
-                      </button>
+                      </Link>
                       <button className="p-2 rounded-lg hover:bg-primary/10 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
                         <span className="material-symbols-outlined text-lg">
                           more_horiz

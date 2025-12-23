@@ -15,9 +15,10 @@ export const useLogin = () => {
       // Store token in cookie (expires in 7 days)
       Cookies.set('token', token, { expires: 7, sameSite: 'strict' });
       
+
       // Invalidate user query to refetch user data
       queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
-      
+      console.log('searchParams', searchParams);
       // Redirect to the original page or dashboard
       const redirect = searchParams.get('redirect') || '/dashboard';
       router.push(redirect);

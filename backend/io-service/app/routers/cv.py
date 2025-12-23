@@ -113,7 +113,7 @@ def save_analyzed_cv(cv_data: Dict[str, Any], db: Session = Depends(get_db)):
             db.query(candidate_models.CandidateRawData).filter(
                 candidate_models.CandidateRawData.candidate_id == candidate_id
             ).delete()
-            db.commit()
+            # db.commit() removed to ensure atomicity with subsequent adds
         
         # Create main candidate record
         candidate = candidate_models.Candidate(
@@ -137,9 +137,28 @@ def save_analyzed_cv(cv_data: Dict[str, Any], db: Session = Depends(get_db)):
         )
         
         if existing_candidate:
-            db.merge(candidate)
+            # For existing candidate, we update the fields instead of adding a new object
+            existing_candidate.full_name = candidate.full_name
+            existing_candidate.email = candidate.email
+            existing_candidate.phone = candidate.phone
+            existing_candidate.original_filename = candidate.original_filename
+            existing_candidate.source = candidate.source
+            existing_candidate.completeness_score = candidate.completeness_score
+            existing_candidate.profile_status = candidate.profile_status
+            existing_candidate.total_experience_years = candidate.total_experience_years
+            existing_candidate.current_position = candidate.current_position
+            existing_candidate.current_company = candidate.current_company
+            existing_candidate.highest_degree = candidate.highest_degree
+            existing_candidate.field_of_study = candidate.field_of_study
+            existing_candidate.institution = candidate.institution
+            existing_candidate.certifications_count = candidate.certifications_count
+            existing_candidate.projects_count = candidate.projects_count
+            existing_candidate.volunteering_count = candidate.volunteering_count
+            existing_candidate.updated_at = datetime.now()
+            # No need to db.merge(candidate) or db.add(candidate) since existing_candidate is already attached
         else:
             db.add(candidate)
+        
         db.flush()
         
         logger.info(f"Saving CV data for candidate_id: {candidate_id}")
@@ -213,7 +232,7 @@ def save_analyzed_cv(cv_data: Dict[str, Any], db: Session = Depends(get_db)):
                 employment_type=work_exp_data.get("employment_type"),
                 country=location_data.get("country") if isinstance(location_data, dict) else None,
                 city=location_data.get("city") if isinstance(location_data, dict) else None,
-                start_date=parse_date(work_exp_data.get("start_date")),
+                start_date=parse_date(work_exp_data.get("start_date")) or datetime.now().date(),
                 end_date=parse_date(work_exp_data.get("end_date")),
                 is_current=work_exp_data.get("is_current", False)
             )
