@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { JobApplication } from "@/features/recruitment/types";
-import { useAssignExam, useAdvanceApplication } from "@/features/recruitment/hooks/use-pipeline";
+import { useAssignExamV2, useAdvanceApplication } from "@/features/recruitment/hooks/use-pipeline";
 import StageCard from "./StageCard";
 import StageActions from "./StageActions";
 import ProgressIndicator from "./ProgressIndicator";
@@ -15,20 +15,36 @@ interface ExamStageProps {
 }
 
 export default function ExamStage({ applications, isLoading, jobId }: ExamStageProps) {
-  const assignExamMutation = useAssignExam();
+  const assignExamMutation = useAssignExamV2();
   const advanceMutation = useAdvanceApplication();
   const [showAssignModal, setShowAssignModal] = useState<number | null>(null);
+  const [examId, setExamId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const handleAssignExam = (appId: number, platform: string, examId: string) => {
+  const handleAssignExam = (appId: number) => {
+    if (!examId.trim()) {
+      alert("Please enter an Exam ID");
+      return;
+    }
     assignExamMutation.mutate({
       appId,
       examData: {
-        platform,
+        platform: "LOOP Assessment",
         exam_id: examId,
-        instructions: "Complete the exam within 48 hours"
+        due_date: dueDate || undefined,
+        instructions: "Complete the exam using the access code provided"
+      }
+    }, {
+      onSuccess: () => {
+        setExamId("");
+        setDueDate("");
+        setShowAssignModal(null);
+      },
+      onError: (error: any) => {
+        alert(`Failed to assign exam: ${error.message || 'Unknown error'}`);
       }
     });
-    setShowAssignModal(null);
   };
 
   const handleAdvance = (appId: number) => {
@@ -37,7 +53,11 @@ export default function ExamStage({ applications, isLoading, jobId }: ExamStageP
       stageUpdate: { stage: "ai_interview", notes: "Exam completed successfully" }
     });
   };
-
+  const copyAccessCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -79,7 +99,9 @@ export default function ExamStage({ applications, isLoading, jobId }: ExamStageP
     >
       {applications.map((app) => {
         const hasExam = app.exam_assigned;
+        const examStarted = app.exam_started_at !== null;
         const examCompleted = app.exam_completed_at !== null;
+        const examGraded = app.exam_finalized_score !== null;
 
         return (
           <StageCard key={app.id} application={app}>
@@ -105,25 +127,81 @@ export default function ExamStage({ applications, isLoading, jobId }: ExamStageP
                       Assign Exam
                     </button>
                   </div>
+                  ): !examStarted ? (
+                    <div>
+                      <p className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-3">
+                        Exam Assigned - Waiting for Candidate
+                      </p>
+                      
+                      {/* Access Code Display */}
+                      {app.exam_access_code && (
+                        <div className="bg-card-light dark:bg-card-dark rounded-lg p-4 border-2 border-dashed border-primary/50 mb-3">
+                          <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                            Candidate Access Code:
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <code className="text-2xl font-mono font-bold tracking-widest text-primary">
+                              {app.exam_access_code}
+                            </code>
+                            <button
+                              onClick={() => copyAccessCode(app.exam_access_code!)}
+                              className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-sm font-bold hover:bg-primary/20 transition-colors flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                {copiedCode === app.exam_access_code ? 'check' : 'content_copy'}
+                              </span>
+                              {copiedCode === app.exam_access_code ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                          <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-2">
+                            Share this code with the candidate to access the exam at <span className="font-mono text-primary">/candidate</span>
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                        <span className="material-symbols-outlined text-sm text-yellow-500 animate-pulse">
+                          hourglass_empty
+                        </span>
+                        Waiting for candidate to start the exam...
+                      </div>
+                    </div>
                 ) : !examCompleted ? (
                   <div>
                     <p className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
-                      Exam Assigned
+                    Exam In Progress
                     </p>
-                    <div className="space-y-1 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                      <p>Platform ID: {app.exam_platform_id}</p>
-                      <p className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-sm text-yellow-500">
-                          hourglass_empty
-                        </span>
-                        Waiting for candidate to complete exam...
-                      </p>
+                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                      <span className="material-symbols-outlined text-sm animate-spin">
+                        refresh
+                      </span>
+                      Candidate is taking the exam...
                     </div>
+                    {app.exam_started_at && (
+                      <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-2">
+                        Started: {new Date(app.exam_started_at).toLocaleString()}
+                      </p>
+                                        )}
+                                        </div>
+                                      ) : !examGraded ? (
+                                        <div>
+                                          <p className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
+                                            Exam Submitted - Awaiting Grading
+                                          </p>
+                                          <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
+                                            <span className="material-symbols-outlined text-sm">
+                                              rate_review
+                                            </span>
+                                            Exam needs to be graded in the exam system
+                                          </div>
+                                          <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-2">
+                                            Submitted: {new Date(app.exam_completed_at!).toLocaleString()}
+                                          </p>
                   </div>
                 ) : (
                   <div>
                     <p className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-2">
-                      Exam Completed
+                    Exam Graded
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -131,17 +209,17 @@ export default function ExamStage({ applications, isLoading, jobId }: ExamStageP
                           Score:
                         </span>
                         <div className={`px-3 py-1 rounded-full font-bold ${
-                          (app.exam_score || 0) >= 70
+                          (app.exam_finalized_score || app.exam_score || 0) >= 70
                             ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-                            : (app.exam_score || 0) >= 50
+                            : (app.exam_finalized_score || app.exam_score || 0) >= 50
                             ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
                             : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
                         }`}>
-                          {app.exam_score}%
+                          {app.exam_finalized_score || app.exam_score}%
                         </div>
                       </div>
                       <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                        Completed: {new Date(app.exam_completed_at).toLocaleString()}
+                      Completed: {new Date(app.exam_completed_at!).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -157,33 +235,44 @@ export default function ExamStage({ applications, isLoading, jobId }: ExamStageP
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1 block">
-                        Platform (External exam system details will be integrated)
+                      Exam ID (from LOOP Assessment System)
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g., HackerRank, CodeSignal"
+                        value={examId}
+                        onChange={(e) => setExamId(e.target.value)}
+                        placeholder="e.g., clx123abc456..."
                         className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark text-sm"
                       />
+                      <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
+                        Get this from the exam management dashboard
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1 block">
-                        Exam ID
+                      Due Date (Optional)
                       </label>
                       <input
-                        type="text"
-                        placeholder="External platform exam ID"
+                        type="datetime-local"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-primary-light dark:text-text-primary-dark text-sm"
                       />
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleAssignExam(app.id, "Placeholder", "exam-123")}
-                        className="flex-1 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90"
+                        onClick={() => handleAssignExam(app.id)}
+                        disabled={assignExamMutation.isPending}
+                        className="flex-1 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Assign
+                         {assignExamMutation.isPending ? 'Assigning...' : 'Assign Exam'}
                       </button>
                       <button
-                        onClick={() => setShowAssignModal(null)}
+                                                onClick={() => {
+                                                  setShowAssignModal(null);
+                                                  setExamId("");
+                                                  setDueDate("");
+                                                }}
                         className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-bold"
                       >
                         Cancel
@@ -194,7 +283,7 @@ export default function ExamStage({ applications, isLoading, jobId }: ExamStageP
               )}
 
               {/* Actions */}
-              {examCompleted && (
+              {examGraded && (
                 <div className="flex justify-end">
                   <StageActions
                     onAdvance={() => handleAdvance(app.id)}

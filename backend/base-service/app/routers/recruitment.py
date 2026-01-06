@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import httpx
 import json
 import logging
+import os
+import hmac
+import hashlib
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -27,8 +30,11 @@ from ..schemas.recruitment import (
     JobPostingNoteCreate, JobPostingNote as JobPostingNoteSchema,
     JobPostingDailyStats as JobPostingDailyStatsSchema,
     PipelineStageUpdate, AIReviewResult, ExamAssignment, ExamResult,
-    AIInterviewSchedule, DocumentUpdate, ProposalData
+    AIInterviewSchedule, DocumentUpdate, ProposalData,
+    ExamWebhookEvent, CreateCandidateExamRequest
 )
+
+
 
 router = APIRouter(
     prefix="/recruitment",
@@ -754,6 +760,188 @@ def send_proposal(
     )
     
     return db_app
+# --- Exam System Integration ---
+
+# Environment configuration for exam system
+# Use host.docker.internal to reach services running on host from Docker container
+EXAM_SYSTEM_URL = os.getenv("EXAM_SYSTEM_URL", "http://host.docker.internal:2000")
+EXAM_WEBHOOK_SECRET = os.getenv("EXAM_WEBHOOK_SECRET", "your-webhook-secret")
+EXAM_SYSTEM_API_KEY = os.getenv("EXAM_SYSTEM_API_KEY", "your-api-key")
+
+@router.post("/webhooks/exam-events")
+async def handle_exam_webhook(
+    event: ExamWebhookEvent,
+    db: Session = Depends(get_db)
+):
+    """
+    Receive exam status updates from the exam system.
+    This is called by the exam system when:
+    - Candidate starts the exam (exam_started)
+    - Candidate submits the exam (exam_submitted)
+    - Exam is graded/finalized (exam_graded)
+    """
+    logger.info(f"Received exam webhook: {event.event} for application {event.externalAppId}")
+    
+    try:
+        # Find the job application by ID
+        app_id = int(event.externalAppId)
+        db_app = db.query(JobApplication).filter(JobApplication.id == app_id).first()
+        
+        if not db_app:
+            logger.error(f"Application not found: {event.externalAppId}")
+            raise HTTPException(status_code=404, detail="Application not found")
+        
+        # Handle different event types
+        if event.event == "exam_started":
+            db_app.exam_started_at = datetime.fromisoformat(event.data.startedAt.replace('Z', '+00:00')) if event.data.startedAt else datetime.utcnow()
+            
+            log_activity(
+                db,
+                db_app.job_posting_id,
+                None,
+                "EXAM_STARTED",
+                f"Candidate {db_app.candidate_name} started the exam"
+            )
+            
+        elif event.event == "exam_submitted":
+            db_app.exam_completed_at = datetime.fromisoformat(event.data.submittedAt.replace('Z', '+00:00')) if event.data.submittedAt else datetime.utcnow()
+            
+            log_activity(
+                db,
+                db_app.job_posting_id,
+                None,
+                "EXAM_SUBMITTED",
+                f"Candidate {db_app.candidate_name} submitted the exam" + 
+                (f" (timed out)" if event.data.timedOut else "") +
+                f" - Answered {event.data.answeredQuestions}/{event.data.totalQuestions} questions"
+            )
+            
+        elif event.event == "exam_graded":
+            db_app.exam_score = int(event.data.totalScore) if event.data.totalScore else None
+            db_app.exam_finalized_score = event.data.totalScore
+            
+            # Determine if passed (e.g., >= 60%)
+            passed = False
+            if event.data.percentage and event.data.percentage >= 60:
+                passed = True
+                # Auto-advance to next pipeline stage
+                db_app.pipeline_stage = "ai_interview"
+                db_app.pipeline_stage_updated_at = datetime.utcnow()
+            
+            log_activity(
+                db,
+                db_app.job_posting_id,
+                None,
+                "EXAM_GRADED",
+                f"Exam graded for {db_app.candidate_name}: {event.data.totalScore}/{event.data.maxScore} ({event.data.percentage}%)" +
+                (f" - Advanced to AI Interview" if passed else " - Did not meet passing threshold")
+            )
+        
+        db.add(db_app)
+        db.commit()
+        db.refresh(db_app)
+        
+        return {"success": True, "message": f"Processed {event.event} event"}
+        
+    except ValueError as e:
+        logger.error(f"Invalid application ID format: {event.externalAppId}")
+        raise HTTPException(status_code=400, detail="Invalid application ID format")
+    except Exception as e:
+        logger.error(f"Error processing exam webhook: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process webhook: {str(e)}")
+
+@router.post("/applications/{app_id}/assign-exam-v2", response_model=JobApplicationSchema)
+async def assign_exam_v2(
+    app_id: int,
+    exam_data: ExamAssignment,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Assign an exam to an application by creating it in the exam system.
+    This enhanced version:
+    1. Calls the exam system API to create a CandidateExam
+    2. Receives the access code
+    3. Stores the access code in the JobApplication
+    """
+    db_app = db.query(JobApplication).filter(JobApplication.id == app_id).first()
+    if not db_app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    try:
+        # Prepare the request to exam system
+        webhook_url = f"{os.getenv('BASE_SERVICE_URL', 'http://localhost:80')}/api/base/recruitment/webhooks/exam-events"
+        
+        exam_request = CreateCandidateExamRequest(
+            examId=exam_data.exam_id,
+            candidateName=db_app.candidate_name,
+            candidateEmail=db_app.email,
+            externalAppId=str(app_id),
+            webhookUrl=webhook_url,
+            webhookSecret=EXAM_WEBHOOK_SECRET,
+            expiresAt=exam_data.due_date.isoformat() if exam_data.due_date else (datetime.utcnow().replace(hour=23, minute=59, second=59) + timedelta(days=7)).isoformat()
+        )
+        
+        # Call exam system API
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{EXAM_SYSTEM_URL}/api/candidate-exams",
+                json=exam_request.dict(),
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": EXAM_SYSTEM_API_KEY
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code != 201 and response.status_code != 200:
+                logger.error(f"Exam system API error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to create exam in exam system: {response.text}"
+                )
+            
+            result = response.json()
+            
+            if not result.get("success"):
+                raise HTTPException(status_code=500, detail="Exam system returned failure")
+            
+            candidate_exam = result.get("candidateExam", {})
+            access_code = candidate_exam.get("accessCode")
+            
+            if not access_code:
+                raise HTTPException(status_code=500, detail="No access code returned from exam system")
+        
+        # Update application with exam details
+        db_app.exam_assigned = True
+        db_app.exam_platform_id = candidate_exam.get("id")
+        db_app.exam_access_code = access_code
+        db_app.pipeline_stage = "exam"
+        db_app.pipeline_stage_updated_at = datetime.utcnow()
+        
+        db.add(db_app)
+        db.commit()
+        db.refresh(db_app)
+        
+        # Log activity
+        log_activity(
+            db,
+            db_app.job_posting_id,
+            current_user.id,
+            "EXAM_ASSIGNED",
+            f"Exam assigned to {db_app.candidate_name} - Access code: {access_code}"
+        )
+        
+        logger.info(f"Successfully assigned exam to application {app_id} with access code {access_code}")
+        
+        return db_app
+        
+    except httpx.RequestError as e:
+        logger.error(f"Failed to connect to exam system: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to connect to exam system: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error assigning exam: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to assign exam: {str(e)}")
 
 # --- Helpers ---
 

@@ -61,9 +61,12 @@ class JobApplication(Base):
     # Exam stage fields
     exam_assigned = Column(Boolean, default=False)
     exam_platform_id = Column(String(255))  # External exam system ID
+    exam_access_code = Column(String(20))  # Access code for candidate to enter exam
+    exam_started_at = Column(DateTime(timezone=True))  # When candidate started the exam
     exam_completed_at = Column(DateTime(timezone=True))
     exam_score = Column(Integer)  # Exam score
-    
+    exam_finalized_score = Column(Integer)  # Final graded score
+
     # AI Interview stage fields
     ai_interview_scheduled_at = Column(DateTime(timezone=True))
     ai_interview_completed_at = Column(DateTime(timezone=True))

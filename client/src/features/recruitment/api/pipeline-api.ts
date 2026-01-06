@@ -64,6 +64,12 @@ export const pipelineApi = {
   triggerAIReview: async (appId: number): Promise<JobApplication> => {
     const response = await api.post<JobApplication>(`/api/base/recruitment/applications/${appId}/trigger-ai-review`, {});
     return response as unknown as JobApplication;
-  }
+  },
+  // Assign exam to application (v2 - integrated with exam system)
+  assignExamV2: async (appId: number, examData: ExamAssignment): Promise<JobApplication> => {
+    const response = await api.post<JobApplication>(`/api/base/recruitment/applications/${appId}/assign-exam-v2`, examData);
+    return response as unknown as JobApplication;
+  },
+  
 };
 

@@ -58,8 +58,11 @@ export interface JobApplication {
   ai_review_score: number | null;
   exam_assigned: boolean;
   exam_platform_id: string | null;
+  exam_access_code: string | null;
+  exam_started_at: string | null;
   exam_completed_at: string | null;
   exam_score: number | null;
+  exam_finalized_score: number | null;
   ai_interview_scheduled_at: string | null;
   ai_interview_completed_at: string | null;
   ai_interview_type: 'video' | 'voice' | null;
