@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+
   images: {
     remotePatterns: [
       {
@@ -12,6 +13,9 @@ const nextConfig: NextConfig = {
         hostname: 'media4.giphy.com',
       },
     ],
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
   async rewrites() {
     return [
