@@ -433,4 +433,77 @@ class CreateCandidateExamResponse(BaseModel):
     candidateExam: Dict[str, Any]
 
 
+# --- Document Review Schemas (for HR Admin) ---
+
+class WorkExperienceSummary(BaseModel):
+    """Summary of work experience for document verification"""
+    job_title: str
+    company: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    is_current: bool = False
+
+class EducationSummary(BaseModel):
+    """Summary of education for document verification"""
+    institution: str
+    degree: Optional[str] = None
+    field_of_study: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+class CandidateVerificationInfo(BaseModel):
+    """Candidate info parsed from CV for document verification"""
+    full_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    current_position: Optional[str] = None
+    current_company: Optional[str] = None
+    total_experience_years: Optional[float] = None
+    highest_degree: Optional[str] = None
+    field_of_study: Optional[str] = None
+    institution: Optional[str] = None
+    education: List[EducationSummary] = []
+    work_experience: List[WorkExperienceSummary] = []
+    skills: List[str] = []
+    certifications: List[str] = []
+
+class PortalDocumentSchema(BaseModel):
+    """Schema for portal document"""
+    id: int
+    portal_user_id: int
+    application_id: int
+    document_type: str
+    title: Optional[str] = None
+    file_url: str
+    file_name: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    status: str
+    uploaded_at: datetime
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[int] = None
+    reviewer_notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class DocumentForReview(BaseModel):
+    """Document with candidate info for HR review"""
+    document: PortalDocumentSchema
+    candidate_info: CandidateVerificationInfo
+
+class DocumentsForReviewResponse(BaseModel):
+    """Response containing all documents for review with candidate info"""
+    application_id: int
+    candidate_name: str
+    email: str
+    documents: List[PortalDocumentSchema]
+    candidate_info: CandidateVerificationInfo
+    all_required_approved: bool = False
+
+class DocumentReviewRequest(BaseModel):
+    """Request to review (approve/reject) a document"""
+    status: str  # "approved" or "rejected"
+    reviewer_notes: Optional[str] = None
+
 

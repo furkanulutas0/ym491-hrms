@@ -3,7 +3,7 @@ services:
     build: ./gateway
     container_name: gateway
     ports:
-      - "6000:80"
+      - "6060:6060"
     develop:
       watch:
         - action: sync
@@ -57,7 +57,7 @@ services:
     build: ./ai-service
     container_name: ai-service
     ports:
-      - "6001:8000"
+      - "6061:6061"
     develop:
       watch:
         - action: sync
@@ -83,7 +83,7 @@ services:
     build: ./base-service
     container_name: base-service
     ports:
-      - "6002:8000"
+      - "6062:6062"
     develop:
       watch:
         - action: sync
@@ -110,7 +110,7 @@ services:
     build: ./io-service
     container_name: io-service
     ports:
-      - "6003:8000"
+      - "6063:6063"
     develop:
       watch:
         - action: sync

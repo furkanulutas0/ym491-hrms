@@ -8,7 +8,7 @@ import type {
   JobApplication,
 } from '../types';
 
-const IO_SERVICE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost';
+const IO_SERVICE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6060';
 
 export const applicationsApi = {
   /**
@@ -26,7 +26,7 @@ export const applicationsApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 360000, // 2 minute timeout for CV processing
+        timeout: 360600, // 2 minute timeout for CV processing
       }
     );
 
@@ -55,7 +55,7 @@ export const applicationsApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 360000,
+        timeout: 360600,
       }
     );
 

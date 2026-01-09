@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:6000/:path*', // Proxy to Gateway
+        destination: 'http://localhost:6060/:path*', // Proxy to Gateway
       }
     ];
   },

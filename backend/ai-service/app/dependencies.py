@@ -9,7 +9,7 @@ import os
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 # Base service URL for user validation
-BASE_SERVICE_URL = os.getenv("BASE_SERVICE_URL", "http://localhost:6002")
+BASE_SERVICE_URL = os.getenv("BASE_SERVICE_URL", "http://localhost:6062")
 
 class UserData:
     def __init__(self, email: str, role: UserRole, is_active: bool):

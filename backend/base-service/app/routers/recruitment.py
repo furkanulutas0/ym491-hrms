@@ -31,8 +31,11 @@ from ..schemas.recruitment import (
     JobPostingDailyStats as JobPostingDailyStatsSchema,
     PipelineStageUpdate, AIReviewResult, ExamAssignment, ExamResult,
     AIInterviewSchedule, DocumentUpdate, ProposalData,
-    ExamWebhookEvent, CreateCandidateExamRequest
+    ExamWebhookEvent, CreateCandidateExamRequest,
+    DocumentsForReviewResponse, DocumentReviewRequest, PortalDocumentSchema,
+    CandidateVerificationInfo, EducationSummary, WorkExperienceSummary
 )
+from ..models.candidate import PortalDocument, PortalUser
 
 
 
@@ -152,7 +155,7 @@ async def create_application(
     if analyzed_cv_data:
         try:
             # Call io-service to save candidate data
-            io_service_url = "http://io-service:6003/api/io/cv/save-analyzed-cv"
+            io_service_url = "http://io-service:6063/api/io/cv/save-analyzed-cv"
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -493,7 +496,7 @@ async def trigger_ai_review(
             filename = db_app.resume_url.split("/files/")[-1]
             
             # Fetch text from io-service
-            io_service_url = f"http://io-service:6003/api/io/cv-application/files/{filename}/text"
+            io_service_url = f"http://io-service:6063/api/io/cv-application/files/{filename}/text"
             try:
                 async with httpx.AsyncClient() as client:
                     resp = await client.get(io_service_url, timeout=30.0)
@@ -514,7 +517,7 @@ async def trigger_ai_review(
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://ai-service:6001/api/ai/generate/cv-review", # Role uygunluk test edilecek.
+                "http://ai-service:6061/api/ai/generate/cv-review", # Role uygunluk test edilecek.
                 json={
                     "cv_text": cv_text,
                     "job_requirements": job.requirements or [],
@@ -805,6 +808,183 @@ def send_proposal(
     )
     
     return db_app
+
+
+# --- Document Review Endpoints (for HR Admin) ---
+
+@router.get("/applications/{app_id}/documents-for-review", response_model=DocumentsForReviewResponse)
+def get_documents_for_review(
+    app_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get all uploaded documents for an application with candidate CV info for HR review.
+    Returns documents from portal_documents table along with parsed CV data.
+    """
+    # Get the application
+    db_app = db.query(JobApplication).filter(JobApplication.id == app_id).first()
+    if not db_app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Get portal documents for this application
+    documents = db.query(PortalDocument).filter(
+        PortalDocument.application_id == app_id
+    ).order_by(PortalDocument.uploaded_at.desc()).all()
+    
+    # Get candidate CV data if available
+    candidate_info = CandidateVerificationInfo(
+        full_name=db_app.candidate_name,
+        email=db_app.email,
+        phone=db_app.phone
+    )
+    
+    if db_app.candidate_id:
+        # Fetch structured candidate data from candidate tables
+        candidate = db.query(Candidate).filter(
+            Candidate.candidate_id == db_app.candidate_id
+        ).first()
+        
+        if candidate:
+            # Get education
+            education_records = db.query(CandidateEducation).filter(
+                CandidateEducation.candidate_id == candidate.candidate_id
+            ).all()
+            education_list = [
+                EducationSummary(
+                    institution=edu.institution,
+                    degree=edu.degree,
+                    field_of_study=edu.field_of_study,
+                    start_date=str(edu.start_date) if edu.start_date else None,
+                    end_date=str(edu.end_date) if edu.end_date else None
+                )
+                for edu in education_records
+            ]
+            
+            # Get work experience
+            work_records = db.query(CandidateWorkExperience).filter(
+                CandidateWorkExperience.candidate_id == candidate.candidate_id
+            ).all()
+            work_list = [
+                WorkExperienceSummary(
+                    job_title=work.job_title,
+                    company=work.company,
+                    start_date=str(work.start_date) if work.start_date else None,
+                    end_date=str(work.end_date) if work.end_date else None,
+                    is_current=work.is_current or False
+                )
+                for work in work_records
+            ]
+            
+            # Get technical skills
+            skills_records = db.query(CandidateTechnicalSkill).filter(
+                CandidateTechnicalSkill.candidate_id == candidate.candidate_id
+            ).all()
+            skills_list = [skill.skill_name for skill in skills_records]
+            
+            # Build candidate info
+            candidate_info = CandidateVerificationInfo(
+                full_name=candidate.full_name,
+                email=candidate.email or db_app.email,
+                phone=candidate.phone or db_app.phone,
+                current_position=candidate.current_position,
+                current_company=candidate.current_company,
+                total_experience_years=float(candidate.total_experience_years) if candidate.total_experience_years else None,
+                highest_degree=candidate.highest_degree,
+                field_of_study=candidate.field_of_study,
+                institution=candidate.institution,
+                education=education_list,
+                work_experience=work_list,
+                skills=skills_list,
+                certifications=[]  # Can be expanded if certifications table exists
+            )
+    
+    # Check if all required documents are approved
+    documents_required = db_app.documents_required or []
+    required_doc_types = [doc.get('document_type') for doc in documents_required if doc.get('required')]
+    
+    all_required_approved = True
+    for doc_type in required_doc_types:
+        doc = next((d for d in documents if d.document_type == doc_type), None)
+        if not doc or doc.status != 'approved':
+            all_required_approved = False
+            break
+    
+    return DocumentsForReviewResponse(
+        application_id=app_id,
+        candidate_name=db_app.candidate_name,
+        email=db_app.email,
+        documents=[PortalDocumentSchema.model_validate(doc) for doc in documents],
+        candidate_info=candidate_info,
+        all_required_approved=all_required_approved
+    )
+
+
+@router.post("/applications/{app_id}/documents/{doc_id}/review", response_model=PortalDocumentSchema)
+def review_document(
+    app_id: int,
+    doc_id: int,
+    review: DocumentReviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Approve or reject a specific document.
+    Status must be 'approved' or 'rejected'.
+    """
+    # Validate status
+    if review.status not in ['approved', 'rejected']:
+        raise HTTPException(status_code=400, detail="Status must be 'approved' or 'rejected'")
+    
+    # Get the application
+    db_app = db.query(JobApplication).filter(JobApplication.id == app_id).first()
+    if not db_app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Get the document
+    document = db.query(PortalDocument).filter(
+        PortalDocument.id == doc_id,
+        PortalDocument.application_id == app_id
+    ).first()
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Update document status
+    document.status = review.status
+    document.reviewed_at = datetime.utcnow()
+    document.reviewed_by = current_user.id
+    document.reviewer_notes = review.reviewer_notes
+    
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+    
+    # Sync status to job_applications.documents_submitted
+    if db_app.documents_submitted:
+        from sqlalchemy.orm.attributes import flag_modified
+        for doc_entry in db_app.documents_submitted:
+            if doc_entry.get('document_type') == document.document_type:
+                doc_entry['status'] = review.status
+                doc_entry['reviewed_at'] = datetime.utcnow().isoformat()
+                break
+        flag_modified(db_app, "documents_submitted")
+        db.commit()
+    
+    # Log activity
+    action = "DOCUMENT_APPROVED" if review.status == "approved" else "DOCUMENT_REJECTED"
+    log_activity(
+        db,
+        db_app.job_posting_id,
+        current_user.id,
+        action,
+        f"{document.document_type} document {review.status} for {db_app.candidate_name}" +
+        (f": {review.reviewer_notes}" if review.reviewer_notes else "")
+    )
+    
+    return document
+
+
 # --- Exam System Integration ---
 
 # Environment configuration for exam system
@@ -915,7 +1095,7 @@ async def assign_exam_v2(
     
     try:
         # Prepare the request to exam system
-        webhook_url = f"{os.getenv('BASE_SERVICE_URL', 'http://localhost:6002')}/api/base/recruitment/webhooks/exam-events"
+        webhook_url = f"{os.getenv('BASE_SERVICE_URL', 'http://localhost:6062')}/api/base/recruitment/webhooks/exam-events"
         
         exam_request = CreateCandidateExamRequest(
             examId=exam_data.exam_id,
