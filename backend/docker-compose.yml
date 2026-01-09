@@ -4,6 +4,8 @@ services:
     container_name: gateway
     ports:
       - "6060:6060"
+    networks:
+      - app-network
     develop:
       watch:
         - action: sync
@@ -22,6 +24,8 @@ services:
     image: postgres:15-alpine
     container_name: postgres_db
     restart: always
+    networks:
+      - app-network
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -40,6 +44,8 @@ services:
   backup-on-start:
     image: postgres:15 # pg_dump aracını kullanmak için aynı imajı kullanıyoruz
     container_name: startup_backup_worker
+    networks:
+      - app-network
     depends_on:
       db:
         condition: service_healthy # db servisi "healthy" olana kadar bu servis başlamaz
@@ -58,6 +64,8 @@ services:
     container_name: ai-service
     ports:
       - "6061:6061"
+    networks:
+      - app-network
     develop:
       watch:
         - action: sync
@@ -73,7 +81,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/app_db
       - GEMINI_API_KEY=AIzaSyAWpWe-nvAET9k5FylNdaorUdJ4kgAhUpk
-      - BASE_SERVICE_URL=http://base-service:8000
+      - BASE_SERVICE_URL=http://base-service:6062
       - SECRET_KEY=your-secret-key-change-in-production
     depends_on:
       - db
@@ -84,6 +92,8 @@ services:
     container_name: base-service
     ports:
       - "6062:6062"
+    networks:
+      - app-network
     develop:
       watch:
         - action: sync
@@ -111,6 +121,8 @@ services:
     container_name: io-service
     ports:
       - "6063:6063"
+    networks:
+      - app-network
     develop:
       watch:
         - action: sync
@@ -126,10 +138,9 @@ services:
       - cv-uploads:/app/cv-uploads
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/app_db
-      - BASE_SERVICE_URL=http://base-service:8000
+      - BASE_SERVICE_URL=http://base-service:6062
       - SECRET_KEY=your-secret-key-change-in-production
       - REDIS_URL=redis://redis:6379/0
-
     depends_on:
       - db
       - redis
@@ -140,7 +151,13 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    networks:
+      - app-network
     restart: always
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
