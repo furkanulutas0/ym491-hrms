@@ -17,7 +17,7 @@ import type {
   ProposalResponse
 } from '../types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6060';
 
 // Create axios instance for candidate API
 const candidateAxios = axios.create({
@@ -137,7 +137,7 @@ export const candidateApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 60000,
+        timeout: 60600,
       }
     );
     return response.data;
