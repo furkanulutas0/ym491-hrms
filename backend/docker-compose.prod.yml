@@ -60,7 +60,7 @@ services:
       - app-network
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/app_db
-      - GEMINI_API_KEY=AIzaSyAWpWe-nvAET9k5FylNdaorUdJ4kgAhUpk
+      - GEMINI_API_KEY=AIzaSyAEuv5gpDRmo-VFKhpl0GDkJpEe6WN_yj4
       - BASE_SERVICE_URL=http://base-service:6062
       - SECRET_KEY=your-secret-key-change-in-production
     depends_on:
