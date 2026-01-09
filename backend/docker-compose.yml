@@ -72,7 +72,7 @@ services:
       - ./ai-service:/app
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/app_db
-      - GEMINI_API_KEY=AIzaSyBI_gcov68VB1xMsj6qqPC9UAXDNaZxjEI
+      - GEMINI_API_KEY=AIzaSyAWpWe-nvAET9k5FylNdaorUdJ4kgAhUpk
       - BASE_SERVICE_URL=http://base-service:8000
       - SECRET_KEY=your-secret-key-change-in-production
     depends_on:
@@ -99,6 +99,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/app_db
       - SECRET_KEY=your-secret-key-change-in-production
+      - EXAM_SYSTEM_URL=https://apigwexam.douloop.com
+      - EXAM_WEBHOOK_SECRET=your-webhook-secret
+      - EXAM_SYSTEM_API_KEY=your-api-key
     depends_on:
       - db
     restart: always

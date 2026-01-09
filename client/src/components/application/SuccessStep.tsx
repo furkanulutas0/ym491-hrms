@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 interface SuccessStepProps {
   candidateName: string;
   jobTitle: string;
@@ -46,7 +48,7 @@ export function SuccessStep({ candidateName, jobTitle, onClose }: SuccessStepPro
             <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               1
             </span>
-            <span>Our team will review your application within 5-7 business days.</span>
+            <span>Our AI will review your application and match it to the job requirements.</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
@@ -58,9 +60,32 @@ export function SuccessStep({ candidateName, jobTitle, onClose }: SuccessStepPro
             <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
               3
             </span>
-            <span>If shortlisted, we&apos;ll contact you to schedule an interview.</span>
+            <span>Track your application progress in the <span className="text-emerald-400 font-medium">Candidate Portal</span>.</span>
           </li>
         </ul>
+      </div>
+
+      {/* Candidate Portal CTA */}
+      <div className="w-full rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-emerald-400">dashboard</span>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-semibold text-white mb-1">Track Your Application</h4>
+            <p className="text-xs text-gray-400 mb-3">
+              Create a free account to track your application status, complete assessments, 
+              attend interviews, and upload documents.
+            </p>
+            <Link
+              href="/portal/register"
+              className="inline-flex items-center gap-1 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Go to Candidate Portal
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Close Button */}
@@ -73,4 +98,3 @@ export function SuccessStep({ candidateName, jobTitle, onClose }: SuccessStepPro
     </div>
   );
 }
-

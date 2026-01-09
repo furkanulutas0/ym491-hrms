@@ -2,11 +2,13 @@ from typing import Union
 from fastapi import FastAPI
 from .routers import cv
 from .routers import cv_upload
+from .routers import documents
 
 app = FastAPI(root_path="/api/io")
 
 app.include_router(cv.router)
 app.include_router(cv_upload.router)
+app.include_router(documents.router)
 
 # CORS is handled by nginx gateway - no middleware needed here
 

@@ -337,6 +337,17 @@ def advance_application(
     db_app.pipeline_stage = stage_update.stage
     db_app.pipeline_stage_updated_at = datetime.utcnow()
     
+    # Initialize default documents_required when entering cv_verification stage
+    if stage_update.stage == "cv_verification" and not db_app.documents_required:
+        db_app.documents_required = [
+            {"document_type": "id_card", "title": "Government-issued ID", "description": "Passport, Driver's License, or National ID", "required": True, "submitted": False},
+            {"document_type": "diploma", "title": "Educational Diploma", "description": "Degree certificate or diploma", "required": True, "submitted": False},
+            {"document_type": "certificate", "title": "Professional Certificates", "description": "Relevant certifications", "required": False, "submitted": False},
+            {"document_type": "reference", "title": "Professional References", "description": "2-3 professional references", "required": True, "submitted": False},
+        ]
+        if db_app.documents_submitted is None:
+            db_app.documents_submitted = []
+    
     db.add(db_app)
     db.commit()
     db.refresh(db_app)
@@ -679,6 +690,40 @@ def schedule_interview(
     )
     
     return db_app
+
+@router.post("/applications/{app_id}/simulate-interview-complete", response_model=JobApplicationSchema)
+def simulate_interview_complete(
+    app_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Simulate completing an AI interview (for development/testing)"""
+    db_app = db.query(JobApplication).filter(JobApplication.id == app_id).first()
+    if not db_app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    if not db_app.ai_interview_scheduled_at:
+        raise HTTPException(status_code=400, detail="Interview must be scheduled first")
+    
+    # Mark interview as completed
+    db_app.ai_interview_completed_at = datetime.utcnow()
+    db_app.pipeline_stage_updated_at = datetime.utcnow()
+    
+    db.add(db_app)
+    db.commit()
+    db.refresh(db_app)
+    
+    # Log activity
+    log_activity(
+        db,
+        db_app.job_posting_id,
+        current_user.id,
+        "INTERVIEW_COMPLETED",
+        f"AI interview completed (simulated) for {db_app.candidate_name}"
+    )
+    
+    return db_app
+
 
 @router.post("/applications/{app_id}/documents", response_model=JobApplicationSchema)
 def update_documents(

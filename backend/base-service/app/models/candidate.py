@@ -1,10 +1,71 @@
-from sqlalchemy import Column, Integer, String, Boolean, Date, Text, ForeignKey, DECIMAL, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Date, DECIMAL, TIMESTAMP
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..database import Base
 
+
+# ============================================================
+# Portal Authentication Models (for candidate portal login)
+# ============================================================
+
+class PortalUser(Base):
+    """
+    Portal user model for candidate authentication.
+    Linked to JobApplication and Candidate (CV data) by email.
+    """
+    __tablename__ = "portal_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String(150))
+    phone = Column(String(50))
+    linkedin_url = Column(String(500))
+    portfolio_url = Column(String(500))
+    is_active = Column(Boolean, default=True)
+    email_verified = Column(Boolean, default=False)
+    verification_token = Column(String(255))
+    reset_token = Column(String(255))
+    reset_token_expires = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    documents = relationship("PortalDocument", back_populates="portal_user", cascade="all, delete-orphan")
+
+
+class PortalDocument(Base):
+    """
+    Store uploaded verification documents for portal users.
+    """
+    __tablename__ = "portal_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    portal_user_id = Column(Integer, ForeignKey("portal_users.id"), nullable=False, index=True)
+    application_id = Column(Integer, ForeignKey("job_applications.id"), nullable=False, index=True)
+    document_type = Column(String(50), nullable=False)
+    title = Column(String(200))
+    file_url = Column(String(500), nullable=False)
+    file_name = Column(String(255))
+    file_size = Column(Integer)
+    mime_type = Column(String(100))
+    status = Column(String(20), default="pending", nullable=False)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True))
+    reviewed_by = Column(Integer, ForeignKey("users.id"))
+    reviewer_notes = Column(Text)
+
+    # Relationships
+    portal_user = relationship("PortalUser", back_populates="documents")
+
+
+# ============================================================
+# Candidate CV Data Models (from CV parsing)
+# ============================================================
+
 class Candidate(Base):
+    """Candidate profile parsed from CV"""
     __tablename__ = "candidates"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -32,53 +93,6 @@ class Candidate(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
 
-    # Relationships
-    personal_info = relationship("CandidatePersonalInfo", back_populates="candidate", uselist=False)
-    addresses = relationship("CandidateAddress", back_populates="candidate")
-    work_experiences = relationship("CandidateWorkExperience", back_populates="candidate")
-    education = relationship("CandidateEducation", back_populates="candidate")
-    technical_skills = relationship("CandidateTechnicalSkill", back_populates="candidate")
-    soft_skills = relationship("CandidateSoftSkill", back_populates="candidate")
-    languages = relationship("CandidateLanguage", back_populates="candidate")
-    certifications = relationship("CandidateCertification", back_populates="candidate")
-    projects = relationship("CandidateProject", back_populates="candidate")
-    raw_data = relationship("CandidateRawData", back_populates="candidate", uselist=False)
-
-class CandidatePersonalInfo(Base):
-    __tablename__ = "candidate_personal_info"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(String(50), ForeignKey("candidates.candidate_id", ondelete="CASCADE"), nullable=False, unique=True)
-    birth_date = Column(Date)
-    gender = Column(String(20))
-    nationality = Column(String(100))
-    email = Column(String(255))
-    phone = Column(String(50))
-    website = Column(String(255))
-    linkedin_url = Column(String(255))
-    github_url = Column(String(255))
-    professional_title = Column(String(150))
-    professional_summary = Column(Text)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-    
-    candidate = relationship("Candidate", back_populates="personal_info")
-
-class CandidateAddress(Base):
-    __tablename__ = "candidate_addresses"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(String(50), ForeignKey("candidates.candidate_id", ondelete="CASCADE"), nullable=False, index=True)
-    address_type = Column(String(50), default='primary')
-    country = Column(String(100))
-    city = Column(String(100))
-    street = Column(Text)
-    postal_code = Column(String(20))
-    is_current = Column(Boolean, default=True)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-    
-    candidate = relationship("Candidate", back_populates="addresses")
 
 class CandidateWorkExperience(Base):
     __tablename__ = "candidate_work_experience"
@@ -96,40 +110,7 @@ class CandidateWorkExperience(Base):
     description = Column(Text)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-    
-    candidate = relationship("Candidate", back_populates="work_experiences")
-    responsibilities = relationship("CandidateWorkExperienceResponsibility", back_populates="work_experience", cascade="all, delete-orphan")
-    achievements = relationship("CandidateWorkExperienceAchievement", back_populates="work_experience", cascade="all, delete-orphan")
-    technologies = relationship("CandidateWorkExperienceTechnology", back_populates="work_experience", cascade="all, delete-orphan")
 
-class CandidateWorkExperienceResponsibility(Base):
-    __tablename__ = "candidate_work_experience_responsibilities"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    work_experience_id = Column(Integer, ForeignKey("candidate_work_experience.id", ondelete="CASCADE"), nullable=False, index=True)
-    responsibility = Column(Text, nullable=False)
-    display_order = Column(Integer, default=0)
-    
-    work_experience = relationship("CandidateWorkExperience", back_populates="responsibilities")
-
-class CandidateWorkExperienceAchievement(Base):
-    __tablename__ = "candidate_work_experience_achievements"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    work_experience_id = Column(Integer, ForeignKey("candidate_work_experience.id", ondelete="CASCADE"), nullable=False, index=True)
-    achievement = Column(Text, nullable=False)
-    display_order = Column(Integer, default=0)
-    
-    work_experience = relationship("CandidateWorkExperience", back_populates="achievements")
-
-class CandidateWorkExperienceTechnology(Base):
-    __tablename__ = "candidate_work_experience_technologies"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    work_experience_id = Column(Integer, ForeignKey("candidate_work_experience.id", ondelete="CASCADE"), nullable=False, index=True)
-    technology = Column(String(100), nullable=False)
-    
-    work_experience = relationship("CandidateWorkExperience", back_populates="technologies")
 
 class CandidateEducation(Base):
     __tablename__ = "candidate_education"
@@ -146,18 +127,7 @@ class CandidateEducation(Base):
     thesis = Column(Text)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-    
-    candidate = relationship("Candidate", back_populates="education")
-    courses = relationship("CandidateEducationCourse", back_populates="education", cascade="all, delete-orphan")
 
-class CandidateEducationCourse(Base):
-    __tablename__ = "candidate_education_courses"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    education_id = Column(Integer, ForeignKey("candidate_education.id", ondelete="CASCADE"), nullable=False, index=True)
-    course_name = Column(String(200), nullable=False)
-    
-    education = relationship("CandidateEducation", back_populates="courses")
 
 class CandidateTechnicalSkill(Base):
     __tablename__ = "candidate_technical_skills"
@@ -171,7 +141,6 @@ class CandidateTechnicalSkill(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
 
-    candidate = relationship("Candidate", back_populates="technical_skills")
 
 class CandidateSoftSkill(Base):
     __tablename__ = "candidate_soft_skills"
@@ -181,83 +150,6 @@ class CandidateSoftSkill(Base):
     skill_name = Column(String(100), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
-    candidate = relationship("Candidate", back_populates="soft_skills")
-
-class CandidateLanguage(Base):
-    __tablename__ = "candidate_languages"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(String(50), ForeignKey("candidates.candidate_id", ondelete="CASCADE"), nullable=False, index=True)
-    language = Column(String(100), nullable=False)
-    proficiency = Column(String(50))
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-
-    candidate = relationship("Candidate", back_populates="languages")
-
-class CandidateCertification(Base):
-    __tablename__ = "candidate_certifications"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(String(50), ForeignKey("candidates.candidate_id", ondelete="CASCADE"), nullable=False, index=True)
-    certification_name = Column(String(200), nullable=False)
-    issuing_organization = Column(String(200))
-    issue_date = Column(Date)
-    expiration_date = Column(Date)
-    credential_id = Column(String(150))
-    credential_url = Column(String(255))
-    does_not_expire = Column(Boolean, default=False)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-
-    candidate = relationship("Candidate", back_populates="certifications")
-
-class CandidateProject(Base):
-    __tablename__ = "candidate_projects"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(String(50), ForeignKey("candidates.candidate_id", ondelete="CASCADE"), nullable=False, index=True)
-    project_name = Column(String(200), nullable=False)
-    description = Column(Text)
-    role = Column(String(150))
-    start_date = Column(Date)
-    end_date = Column(Date)
-    is_current = Column(Boolean, default=False)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-    
-    technologies = relationship("CandidateProjectTechnology", back_populates="project", cascade="all, delete-orphan")
-    achievements = relationship("CandidateProjectAchievement", back_populates="project", cascade="all, delete-orphan")
-    links = relationship("CandidateProjectLink", back_populates="project", cascade="all, delete-orphan")
-    candidate = relationship("Candidate", back_populates="projects")
-
-class CandidateProjectTechnology(Base):
-    __tablename__ = "candidate_project_technologies"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("candidate_projects.id", ondelete="CASCADE"), nullable=False, index=True)
-    technology = Column(String(100), nullable=False)
-    
-    project = relationship("CandidateProject", back_populates="technologies")
-
-class CandidateProjectAchievement(Base):
-    __tablename__ = "candidate_project_achievements"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("candidate_projects.id", ondelete="CASCADE"), nullable=False, index=True)
-    achievement = Column(Text, nullable=False)
-    
-    project = relationship("CandidateProject", back_populates="achievements")
-
-class CandidateProjectLink(Base):
-    __tablename__ = "candidate_project_links"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("candidate_projects.id", ondelete="CASCADE"), nullable=False, index=True)
-    url = Column(String(255), nullable=False)
-    link_type = Column(String(50))
-    
-    project = relationship("CandidateProject", back_populates="links")
 
 class CandidateRawData(Base):
     __tablename__ = "candidate_raw_data"
@@ -267,6 +159,3 @@ class CandidateRawData(Base):
     raw_structured_data = Column(JSONB)
     n8n_response = Column(JSONB)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-
-    candidate = relationship("Candidate", back_populates="raw_data")
-

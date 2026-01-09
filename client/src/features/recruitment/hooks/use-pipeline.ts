@@ -103,6 +103,19 @@ export const useScheduleInterview = () => {
   });
 };
 
+// Mutation: Simulate interview completion (for development/testing)
+export const useSimulateInterviewComplete = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (appId: number) => pipelineApi.simulateInterviewComplete(appId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipeline-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+    },
+  });
+};
+
 // Mutation: Update documents
 export const useUpdateDocuments = () => {
   const queryClient = useQueryClient();

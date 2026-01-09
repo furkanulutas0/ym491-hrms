@@ -48,6 +48,12 @@ export const pipelineApi = {
     return response as unknown as JobApplication;
   },
 
+  // Simulate completing AI interview (for development/testing)
+  simulateInterviewComplete: async (appId: number): Promise<JobApplication> => {
+    const response = await api.post<JobApplication>(`/api/base/recruitment/applications/${appId}/simulate-interview-complete`, {});
+    return response as unknown as JobApplication;
+  },
+
   // Update documents for CV verification
   updateDocuments: async (appId: number, documentUpdate: DocumentUpdate): Promise<JobApplication> => {
     const response = await api.post<JobApplication>(`/api/base/recruitment/applications/${appId}/documents`, documentUpdate);
