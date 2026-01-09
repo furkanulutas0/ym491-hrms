@@ -9,8 +9,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, File, UploadFile, HTTPException, Form, Query
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import logging
 
@@ -150,13 +150,21 @@ async def upload_verification_document(
 
 
 @router.get("/files/{application_id}/{filename}")
-async def get_document_file(application_id: int, filename: str):
+async def get_document_file(
+    application_id: int, 
+    filename: str,
+    download: bool = Query(False, description="Set to true to download instead of preview")
+):
     """
     Retrieve an uploaded document file.
+    
+    By default, files are served inline for preview in the browser.
+    Add ?download=true to force download.
     
     Parameters:
     - application_id: The application ID
     - filename: The filename of the document
+    - download: If true, force download instead of inline preview
     """
     file_path = DOCUMENTS_DIR / str(application_id) / filename
     
@@ -175,10 +183,24 @@ async def get_document_file(application_id: int, filename: str):
     }
     media_type = media_types.get(ext, 'application/octet-stream')
     
-    return FileResponse(
-        path=str(file_path),
+    # Read file content
+    with open(file_path, "rb") as f:
+        file_content = f.read()
+    
+    # Set Content-Disposition header based on download parameter
+    if download:
+        content_disposition = f'attachment; filename="{filename}"'
+    else:
+        # Inline display for preview
+        content_disposition = f'inline; filename="{filename}"'
+    
+    return Response(
+        content=file_content,
         media_type=media_type,
-        filename=filename
+        headers={
+            "Content-Disposition": content_disposition,
+            "Cache-Control": "public, max-age=3600",
+        }
     )
 
 

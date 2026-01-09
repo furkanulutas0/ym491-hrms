@@ -8,7 +8,10 @@ import {
   ExamResult,
   AIInterviewSchedule,
   DocumentUpdate,
-  ProposalData
+  ProposalData,
+  DocumentsForReviewResponse,
+  DocumentReviewRequest,
+  PortalDocument
 } from '../types';
 
 export const pipelineApi = {
@@ -76,6 +79,17 @@ export const pipelineApi = {
     const response = await api.post<JobApplication>(`/api/base/recruitment/applications/${appId}/assign-exam-v2`, examData);
     return response as unknown as JobApplication;
   },
-  
+
+  // Get documents for HR review with candidate CV info
+  getDocumentsForReview: async (appId: number): Promise<DocumentsForReviewResponse> => {
+    const response = await api.get<DocumentsForReviewResponse>(`/api/base/recruitment/applications/${appId}/documents-for-review`);
+    return response as unknown as DocumentsForReviewResponse;
+  },
+
+  // Review (approve/reject) a document
+  reviewDocument: async (appId: number, docId: number, review: DocumentReviewRequest): Promise<PortalDocument> => {
+    const response = await api.post<PortalDocument>(`/api/base/recruitment/applications/${appId}/documents/${docId}/review`, review);
+    return response as unknown as PortalDocument;
+  },
 };
 

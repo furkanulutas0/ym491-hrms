@@ -143,3 +143,68 @@ export interface PipelineStageInfo {
   color: string;
 }
 
+// Document Review Types (for HR Admin)
+
+export interface WorkExperienceSummary {
+  job_title: string;
+  company: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_current: boolean;
+}
+
+export interface EducationSummary {
+  institution: string;
+  degree: string | null;
+  field_of_study: string | null;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export interface CandidateVerificationInfo {
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  current_position: string | null;
+  current_company: string | null;
+  total_experience_years: number | null;
+  highest_degree: string | null;
+  field_of_study: string | null;
+  institution: string | null;
+  education: EducationSummary[];
+  work_experience: WorkExperienceSummary[];
+  skills: string[];
+  certifications: string[];
+}
+
+export interface PortalDocument {
+  id: number;
+  portal_user_id: number;
+  application_id: number;
+  document_type: string;
+  title: string | null;
+  file_url: string;
+  file_name: string | null;
+  file_size: number | null;
+  mime_type: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  uploaded_at: string;
+  reviewed_at: string | null;
+  reviewed_by: number | null;
+  reviewer_notes: string | null;
+}
+
+export interface DocumentsForReviewResponse {
+  application_id: number;
+  candidate_name: string;
+  email: string;
+  documents: PortalDocument[];
+  candidate_info: CandidateVerificationInfo;
+  all_required_approved: boolean;
+}
+
+export interface DocumentReviewRequest {
+  status: 'approved' | 'rejected';
+  reviewer_notes?: string;
+}
+
