@@ -101,6 +101,7 @@ export interface CreateApplicationRequest {
   portfolio_url?: string;
   linkedin_url?: string;
   source?: string;
+  analyzed_cv_data?: AnalyzedCVData; // Pass full analyzed data to backend
 }
 
 export interface JobApplication {

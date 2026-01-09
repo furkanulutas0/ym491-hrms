@@ -142,7 +142,6 @@ def parse_analyze_response(response_data: dict) -> dict:
                 except json.JSONDecodeError as e:
                     logger.warning(f"Failed to parse {field} JSON: {e}")
                     analyzed_data[field] = None
-        
         return analyzed_data
     except Exception as e:
         logger.error(f"Error parsing analyze response: {e}")
@@ -296,6 +295,30 @@ async def get_uploaded_file(filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type="application/pdf", filename=filename)
+
+
+@router.get("/files/{filename}/text")
+async def get_file_text(filename: str):
+    """Extract text from a stored PDF file."""
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    try:
+        from pypdf import PdfReader
+        
+        # Read file
+        reader = PdfReader(str(file_path))
+        text = ""
+        for page in reader.pages:
+            extract = page.extract_text()
+            if extract:
+                text += extract + "\n"
+            
+        return {"text": text}
+    except Exception as e:
+        logger.error(f"Failed to extract text from {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract text: {str(e)}")
 
 
 @router.post("/analyze", response_model=AnalyzedCVResponse)

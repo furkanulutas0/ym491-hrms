@@ -1,10 +1,12 @@
 fastapi
 uvicorn[standard]
-google-generativeai
+google-genai
 python-dotenv
 pydantic-settings
 passlib[bcrypt]
 bcrypt==4.3.0
 python-jose[cryptography]
 requests
-
+httpx
+debugpy
+pydevd-pycharm~=232.10300.41

@@ -18,6 +18,24 @@ export interface JobPosting {
   updated_at: string | null;
 }
 
+export interface JobPostingCreate {
+  title: string;
+  department: string | null;
+  location: string | null;
+  work_type: string | null;
+  status: string;
+  description: string | null;
+  responsibilities: string[];
+  requirements: string[];
+  benefits: string[];
+  salary_range_min: number | null;
+  salary_range_max: number | null;
+  salary_currency: string | null;
+  expiration_date: string | null;
+}
+
+export type JobPostingUpdate = Partial<JobPostingCreate>;
+
 export interface JobApplication {
   id: number;
   job_posting_id: number;
@@ -40,8 +58,11 @@ export interface JobApplication {
   ai_review_score: number | null;
   exam_assigned: boolean;
   exam_platform_id: string | null;
+  exam_access_code: string | null;
+  exam_started_at: string | null;
   exam_completed_at: string | null;
   exam_score: number | null;
+  exam_finalized_score: number | null;
   ai_interview_scheduled_at: string | null;
   ai_interview_completed_at: string | null;
   ai_interview_type: 'video' | 'voice' | null;

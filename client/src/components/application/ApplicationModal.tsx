@@ -111,6 +111,7 @@ export function ApplicationModal({
             resume_url: fileUrl,
             linkedin_url: linkedinUrl,
             source: "Career Page",
+            analyzed_cv_data: result.data, // Pass the analyzed data so it can be saved
           });
 
           setStep("success");

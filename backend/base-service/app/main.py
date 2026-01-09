@@ -3,18 +3,21 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from .database import get_db, engine
-from .models import user as user_model, recruitment as recruitment_model
-from .routers import employee_router, auth, recruitment
+from .models import user as user_model, recruitment as recruitment_model, candidate as candidate_model
+from .routers import employee_router, auth, recruitment, candidate_auth, candidate_portal
 from fastapi.middleware.cors import CORSMiddleware
 
 user_model.Base.metadata.create_all(bind=engine)
 recruitment_model.Base.metadata.create_all(bind=engine)
+candidate_model.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(root_path="/api/base")
 
 app.include_router(auth.router)
 app.include_router(employee_router.router)
-app.include_router(recruitment.router) 
+app.include_router(recruitment.router)
+app.include_router(candidate_auth.router)
+app.include_router(candidate_portal.router) 
 
 origins = ["*"]
 

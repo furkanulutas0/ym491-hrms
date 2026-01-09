@@ -48,7 +48,7 @@ export const useUpdateAIReview = () => {
     },
   });
 };
-
+ 
 // Mutation: Assign exam
 export const useAssignExam = () => {
   const queryClient = useQueryClient();
@@ -56,6 +56,18 @@ export const useAssignExam = () => {
   return useMutation({
     mutationFn: ({ appId, examData }: { appId: number; examData: ExamAssignment }) =>
       pipelineApi.assignExam(appId, examData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipeline-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+    },
+  });
+};
+export const useAssignExamV2 = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ appId, examData }: { appId: number; examData: ExamAssignment }) =>
+      pipelineApi.assignExamV2(appId, examData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipeline-applications'] });
       queryClient.invalidateQueries({ queryKey: ['job-applications'] });
@@ -84,6 +96,19 @@ export const useScheduleInterview = () => {
   return useMutation({
     mutationFn: ({ appId, interviewData }: { appId: number; interviewData: AIInterviewSchedule }) =>
       pipelineApi.scheduleInterview(appId, interviewData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipeline-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['job-applications'] });
+    },
+  });
+};
+
+// Mutation: Simulate interview completion (for development/testing)
+export const useSimulateInterviewComplete = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (appId: number) => pipelineApi.simulateInterviewComplete(appId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipeline-applications'] });
       queryClient.invalidateQueries({ queryKey: ['job-applications'] });

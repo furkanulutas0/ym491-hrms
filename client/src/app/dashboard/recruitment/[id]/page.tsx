@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useJobApplications } from "@/features/recruitment/hooks/use-applications";
-import { useJob } from "@/features/recruitment/hooks/use-jobs";
+import { useJob, useUpdateJob } from "@/features/recruitment/hooks/use-jobs";
 import PipelineTab from "@/components/recruitment/PipelineTab";
 
 export default function JobDetailsPage() {
@@ -16,6 +16,16 @@ export default function JobDetailsPage() {
   // Fetch job details and applications from database
   const { data: jobDetails, isLoading: isLoadingJob, error: jobError } = useJob(jobId);
   const { data: applications = [], isLoading: isLoadingApplications } = useJobApplications(jobId);
+  const updateJobMutation = useUpdateJob();
+
+  const handlePauseToggle = () => {
+    if (!jobDetails) return;
+    const newStatus = jobDetails.status === "Paused" ? "Active" : "Paused";
+    updateJobMutation.mutate({
+      id: jobId,
+      data: { status: newStatus }
+    });
+  };
 
   // Calculate stats from real data
   const stats = useMemo(() => {
@@ -103,11 +113,18 @@ export default function JobDetailsPage() {
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <button className="flex items-center justify-center h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors">
+          <Link 
+            href={`/dashboard/recruitment/${jobId}/edit`}
+            className="flex items-center justify-center h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors"
+          >
             Edit Job
-          </button>
-          <button className="flex items-center justify-center h-10 px-4 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark text-sm font-bold hover:bg-background-light dark:hover:bg-gray-800 transition-colors">
-            Pause Posting
+          </Link>
+          <button 
+            onClick={handlePauseToggle}
+            disabled={updateJobMutation.isPending}
+            className="flex items-center justify-center h-10 px-4 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark text-sm font-bold hover:bg-background-light dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {updateJobMutation.isPending ? "Updating..." : (jobDetails.status === "Paused" ? "Resume Posting" : "Pause Posting")}
           </button>
           <button className="flex items-center justify-center h-10 px-4 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark text-sm font-bold hover:bg-background-light dark:hover:bg-gray-800 transition-colors">
             Copy Job Link
