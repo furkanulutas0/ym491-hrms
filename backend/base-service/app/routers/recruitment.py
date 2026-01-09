@@ -152,7 +152,7 @@ async def create_application(
     if analyzed_cv_data:
         try:
             # Call io-service to save candidate data
-            io_service_url = "http://io-service:8000/api/io/cv/save-analyzed-cv"
+            io_service_url = "http://io-service:6003/api/io/cv/save-analyzed-cv"
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -493,7 +493,7 @@ async def trigger_ai_review(
             filename = db_app.resume_url.split("/files/")[-1]
             
             # Fetch text from io-service
-            io_service_url = f"http://io-service:8000/api/io/cv-application/files/{filename}/text"
+            io_service_url = f"http://io-service:6003/api/io/cv-application/files/{filename}/text"
             try:
                 async with httpx.AsyncClient() as client:
                     resp = await client.get(io_service_url, timeout=30.0)
@@ -514,7 +514,7 @@ async def trigger_ai_review(
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://ai-service:8000/api/ai/generate/cv-review", # Role uygunluk test edilecek.
+                "http://ai-service:6001/api/ai/generate/cv-review", # Role uygunluk test edilecek.
                 json={
                     "cv_text": cv_text,
                     "job_requirements": job.requirements or [],
@@ -915,7 +915,7 @@ async def assign_exam_v2(
     
     try:
         # Prepare the request to exam system
-        webhook_url = f"{os.getenv('BASE_SERVICE_URL', 'http://localhost:80')}/api/base/recruitment/webhooks/exam-events"
+        webhook_url = f"{os.getenv('BASE_SERVICE_URL', 'http://localhost:6002')}/api/base/recruitment/webhooks/exam-events"
         
         exam_request = CreateCandidateExamRequest(
             examId=exam_data.exam_id,
