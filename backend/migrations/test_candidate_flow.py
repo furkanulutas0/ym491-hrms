@@ -13,7 +13,7 @@ import requests
 import json
 
 # Configuration
-BASE_URL = "http://localhost"  # Adjust if needed
+BASE_URL = "http://localhost:6000"  # Adjust if needed
 IO_SERVICE_URL = f"{BASE_URL}/api/io"
 
 # Sample n8n response (based on the actual format)
