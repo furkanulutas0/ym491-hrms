@@ -3,7 +3,7 @@ services:
     build: ./gateway
     container_name: gateway
     ports:
-      - "80:80"
+      - "6000:80"
     develop:
       watch:
         - action: sync
@@ -27,7 +27,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: app_db
     ports:
-      - "5432:5432"
+      - "6432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -57,7 +57,7 @@ services:
     build: ./ai-service
     container_name: ai-service
     ports:
-      - "8001:8000"
+      - "6001:8000"
     develop:
       watch:
         - action: sync
@@ -83,7 +83,7 @@ services:
     build: ./base-service
     container_name: base-service
     ports:
-      - "8002:8000"
+      - "6002:8000"
     develop:
       watch:
         - action: sync
@@ -110,7 +110,7 @@ services:
     build: ./io-service
     container_name: io-service
     ports:
-      - "8003:8000"
+      - "6003:8000"
     develop:
       watch:
         - action: sync
