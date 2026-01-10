@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const API_URL = process.env.API_URL || 'http://localhost:6060';
+
 const nextConfig: NextConfig = {
 
   images: {
@@ -21,7 +23,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:6060/:path*', // Proxy to Gateway
+        destination: `${API_URL}/api/:path*`, // Proxy to Gateway
       }
     ];
   },
